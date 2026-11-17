@@ -1,0 +1,18 @@
+# A Vercel so precisa de painel/index.html, que ja vem pronto e carrega o dado
+# embutido. Todo o resto desta pasta e a cozinha do projeto.
+#
+# Sem esta lista a Vercel enxerga os .py da raiz, conclui que o repositorio e
+# uma aplicacao Python e tenta buildar. O Python aqui roda na maquina, nunca la.
+
+*.py
+dados/
+.claude/
+__pycache__/
+Claude outputs/
+*.md
+
+# do proprio painel: so o index.html vai ao ar. O modelo e a fonte que o
+# construir.py usa, e o .bak e historico de edicao.
+painel/construir.py
+painel/modelo.html
+painel/*.bak

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "echo 'sem dependencias: o painel e uma pagina estatica'",
+  "buildCommand": "echo 'sem build: painel/index.html ja vem pronto do repositorio'",
+  "outputDirectory": "painel",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+
+# backup de edicao do modelo, nao e versao
+painel/*.bak
+
+# a pasta de entregas em .docx, que nao e codigo
+Claude outputs/
+
+# a Vercel grava aqui quando a CLI e usada
+.vercel/

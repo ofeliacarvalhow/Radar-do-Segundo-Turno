@@ -1,0 +1,46 @@
+﻿dia,instituto,metrica,base,candidato,valor,veiculos_que_reportaram
+2026-10-08,datafolha,aprovacao,,Lula,48.0,1
+2026-10-08,datafolha,intencao,válidos,Flávio Bolsonaro,52.0,1
+2026-10-08,datafolha,intencao,válidos,Lula,48.0,2
+2026-10-08,datafolha,rejeicao,,Flávio Bolsonaro,43.0,1
+2026-10-08,datafolha,rejeicao,,Lula,46.0,2
+2026-10-14,quaest,aprovacao,,Lula,45.0,1
+2026-10-14,quaest,desaprovacao,,Lula,48.0,2
+2026-10-14,quaest,intencao,total,Flávio Bolsonaro,46.0,3
+2026-10-14,quaest,intencao,total,Lula,44.0,3
+2026-10-14,quaest,intencao,válidos,Lula,44.0,1
+2026-10-14,quaest,rejeicao,,Flávio Bolsonaro,54.0,1
+2026-10-14,quaest,rejeicao,,Lula,53.0,1
+2026-10-15,datafolha,aprovacao,,Lula,48.0,1
+2026-10-15,datafolha,desaprovacao,,Lula,50.0,1
+2026-10-15,datafolha,intencao,total,Flávio Bolsonaro,47.0,1
+2026-10-15,datafolha,intencao,total,Lula,45.0,1
+2026-10-15,datafolha,intencao,válidos,Flávio Bolsonaro,51.0,1
+2026-10-15,datafolha,intencao,válidos,Lula,49.0,2
+2026-10-15,datafolha,rejeicao,,Flávio Bolsonaro,44.0,2
+2026-10-15,datafolha,rejeicao,,Lula,46.0,3
+2026-10-20,real time big data,intencao,válidos,Flávio Bolsonaro,52.0,1
+2026-10-20,real time big data,intencao,válidos,Lula,48.0,1
+2026-10-21,quaest,aprovacao,,Lula,46.0,2
+2026-10-21,quaest,desaprovacao,,Lula,47.0,2
+2026-10-21,quaest,intencao,total,Flávio Bolsonaro,45.0,3
+2026-10-21,quaest,intencao,total,Lula,44.0,3
+2026-10-21,quaest,rejeicao,,Flávio Bolsonaro,52.0,2
+2026-10-21,quaest,rejeicao,,Lula,47.0,2
+2026-10-22,datafolha,aprovacao,,Lula,49.0,2
+2026-10-22,datafolha,desaprovacao,,Lula,48.0,2
+2026-10-22,datafolha,intencao,total,Flávio Bolsonaro,47.0,1
+2026-10-22,datafolha,intencao,total,Lula,46.0,1
+2026-10-22,datafolha,intencao,válidos,Lula,50.0,2
+2026-10-22,datafolha,rejeicao,,Flávio Bolsonaro,46.0,3
+2026-10-22,datafolha,rejeicao,,Lula,45.0,2
+2026-10-24,datafolha,intencao,válidos,Flávio Bolsonaro,51.0,3
+2026-10-24,datafolha,intencao,válidos,Lula,49.0,4
+2026-10-24,datafolha,rejeicao,,Flávio Bolsonaro,45.0,3
+2026-10-24,datafolha,rejeicao,,Lula,46.0,3
+2026-10-24,quaest,aprovacao,,Lula,48.0,1
+2026-10-24,quaest,desaprovacao,,Lula,45.0,1
+2026-10-24,quaest,intencao,válidos,Flávio Bolsonaro,51.0,3
+2026-10-24,quaest,intencao,válidos,Lula,49.0,3
+2026-10-24,quaest,rejeicao,,Flávio Bolsonaro,49.0,1
+2026-10-24,quaest,rejeicao,,Lula,47.0,1

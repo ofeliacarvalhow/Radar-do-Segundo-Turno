@@ -1,0 +1,1867 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radar da Cobertura do 2º Turno</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Leitura em camadas: marca, cartoes de KPI, o achado, o detalhe por veiculo,
+   e so entao o drill-down ate a materia original. */
+/* A identidade e a do Midiometro: branco, tinta quase preta, UM acento
+   vermelho usado com parcimonia, e Archivo para tudo menos numero. Os nomes
+   de token do Midiometro sao a fonte da verdade; os nomes que este painel ja
+   usava viraram apelidos para eles, para nao reescrever mil linhas de CSS.
+   Tema claro unico, como no Midiometro, nao ha modo escuro por decisao. */
+:root{
+  --fundo:#ffffff; --tinta:#17181a; --cartao:#ffffff; --cinza:#f5f5f5;
+  --apagado:#737578; --borda:#e5e5e6;
+  --vermelho:#e0212b; --vermelho-fraco:rgba(224,33,43,.10);
+  --raio:.625rem;
+  /* o mesmo respiro em toda a cadeia de leitura da seção */
+  --vao:26px;
+
+  /* Cor por veiculo, identica a do Midiometro: quatro matizes com
+     luminosidades diferentes entre si, separaveis em impressao monocromatica
+     e para quem tem daltonismo. */
+  --c-g1:#e0212b; --c-folha:#1f66d0; --c-cnn:#0f8a6b; --c-uol:#8348c9;
+
+  /* Cor por candidato. NAO sao cores partidarias, de proposito, e foram
+     escolhidas por medida: sao o par que maximiza o pior caso sob daltonismo
+     SEM colidir com os quatro veiculos (pior ΔE 10,2, acima do elo fraco
+     dos proprios veiculos, Folha x UOL, que e 7,1). */
+  --lula:#9d174d;                       /* vinho   */
+  --flavio:#334155;                     /* ardosia */
+  /* as duas acima sao escuras de proposito, para contrastar com o branco do
+     fundo. Sobre a caixa escura da legenda elas sumiriam, entao ha um par
+     claro, so para esse uso. */
+  --lula-claro:#f0a0b8;
+  --flavio-claro:#a8bdd6;
+
+  /* Direcao do descompasso. Segue a regra da seta do Midiometro: o que sobe
+     vai em vermelho, o que cai perde enfase e vai em cinza. */
+  --excesso:var(--vermelho);            /* imprensa cobre mais que o publico busca */
+  --falta:var(--apagado);               /* o publico busca mais que a imprensa cobre */
+
+  /* apelidos dos nomes antigos deste painel */
+  --papel:var(--fundo); --papel-2:var(--cartao); --papel-3:var(--cinza);
+  --suave:var(--apagado); --linha:var(--borda); --grade:var(--borda);
+  --marca:var(--vermelho);
+
+  --display:Archivo,"Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--papel); color:var(--tinta);
+  font:400 15px/1.55 var(--display);
+  -webkit-font-smoothing:antialiased;
+}
+.envolve{max-width:1080px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{margin:0;text-wrap:balance;font-weight:800;letter-spacing:-.015em}
+h1{font-size:clamp(1.7rem,5vw,2.35rem);font-weight:900;letter-spacing:-.045em;
+  line-height:1.08;margin:0}
+h2{font-size:1.18rem;line-height:1.25}
+h3{font-size:.95rem;font-weight:600}
+/* sub-título dentro de uma seção: centrado como os h2, com o mesmo filete */
+.sub-secao{display:flex;flex-direction:column;align-items:center;gap:var(--vao);
+  margin:calc(var(--vao) * 1.4) auto var(--vao);font-size:1.12rem;text-align:center}
+/* o sub-título divide dentro da seção: mesma linha, largura toda */
+.sub-secao::before{content:"";width:100%;height:2px;background:var(--vermelho);margin-bottom:4px}
+p{margin:0}
+a{color:inherit}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* ---------- topo ---------- */
+.marca-barra{height:4px;background:var(--marca)}
+/* Três colunas: o vão da esquerda espelha a navegação da direita, então a
+   marca cai no centro ótico sem truque de margem. Sem linha embaixo: o
+   título vem logo em seguida e os dois leem como um bloco só. */
+header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+  gap:18px;padding-block:30px 10px}
+.sobrenome{font-size:.72rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--marca)}
+.subtitulo{margin:12px auto 0;color:var(--suave);font-size:1rem;max-width:66ch}
+.carimbo{margin-top:18px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.selo{font-size:.74rem;padding:3px 9px;border:1px solid var(--linha);border-radius:999px;color:var(--suave);background:var(--papel-2)}
+.selo b{font-weight:600;color:var(--tinta)}
+
+/* ---------- KPIs ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(192px,1fr));gap:12px;margin-block:22px}
+.kpi{background:var(--papel-2);border:1px solid var(--linha);border-radius:10px;padding:15px 16px;min-width:0;display:flex;flex-direction:column;gap:5px}
+/* o destaque lateral só no primeiro cartão parecia defeito de render;
+   os quatro indicadores têm o mesmo peso */
+.kpi.destaque{}
+.kpi .rotulo{font-size:.72rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--suave)}
+.kpi .valor{font-family:var(--mono);font-size:1.85rem;font-weight:500;line-height:1;font-variant-numeric:tabular-nums}
+.kpi .glosa{font-size:.8rem;color:var(--suave);line-height:1.4}
+/* a escolha do termo domina o indicador, entao ela fica no corpo da pagina e
+   nao na nota de rodape, onde ninguem a leria antes do numero */
+
+/* ---------- secoes ---------- */
+/* A divisão entre seções é a marca da página: linha vermelha, largura
+   inteira. Antes era um fio cinza quase invisível mais um filete curto
+   acima do título, dois elementos para uma função só. */
+section{padding-block:var(--vao) calc(var(--vao) * 1.4);
+  border-top:2px solid var(--vermelho)}
+/* O título centrado e o ícone logo ao lado dele: com margin-left:auto o
+   ícone ia para a borda da tela e o título ficava órfão à esquerda. */
+.cabeca{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
+  gap:10px;margin:0 auto var(--vao);max-width:92ch;width:100%;text-align:center}
+/* um icone por secao, no canto direito, em vermelho. Linear 24x24, traco 2,
+   familia Feather, nunca emoji, que muda de forma em cada sistema. */
+.cabeca .icone{width:19px;height:19px;flex:none;color:var(--vermelho);
+  vertical-align:-2px;margin-left:9px;display:inline-block}
+/* sem este espaçador, título e ícone centram JUNTOS e o título fica
+   deslocado para a esquerda pela metade da largura do ícone */
+
+.achado{margin:0 auto var(--vao);font-size:1.02rem;line-height:1.62;
+  color:var(--suave);max-width:92ch;text-align:center}
+.achado b{color:var(--tinta);font-weight:600}
+figure{margin:0}
+section > h3, section > p:not(.achado):not(.nota){max-width:92ch;margin-inline:auto}
+.rolagem{overflow-x:auto}
+svg{display:block;max-width:100%;height:auto}
+/* A legenda é leitura obrigatória, não nota de rodapé: caixa escura e texto
+   branco dão o contraste que o vermelho sobre rosa-claro não dava. */
+figcaption{margin:var(--vao) auto 0;max-width:92ch;font-size:.88rem;line-height:1.55;
+  font-weight:500;color:#fff;background:#3a3d42;border-radius:var(--raio);
+  padding:14px 22px;text-align:center}
+figcaption b{color:#fff;font-weight:700}
+
+/* ---------- barras de tema ---------- */
+/* Lista, nao grafico de pizza: onze fatias em pizza viram onze fatias
+   indistinguiveis, e a comparacao que interessa e entre comprimentos. */
+.temas{max-width:72ch;margin:0 auto;display:grid;gap:11px}
+.tema-linha{display:grid;grid-template-columns:15ch 1fr 9ch;align-items:center;gap:12px}
+.tema-nome{font-size:.9rem;font-weight:600;text-align:right}
+.tema-trilha{background:var(--cinza);border-radius:999px;height:19px;overflow:hidden}
+/* display:block e obrigatorio: o span nasce inline, e em elemento inline
+   width em % e height:100% nao valem nada. As barras ficavam com caixa de
+   zero por zero e a secao mostrava so a pista cinza, em qualquer navegador. */
+.tema-barra{display:block;height:100%;background:var(--vermelho);border-radius:999px;min-width:3px}
+.tema-barra.fraca{background:#b9bcc2}
+.tema-valor{font-size:.86rem;font-variant-numeric:tabular-nums;text-align:left;
+  color:var(--apagado)}
+.tema-valor b{color:var(--tinta);font-weight:700}
+@media (max-width:560px){
+  .tema-linha{grid-template-columns:11ch 1fr 7ch;gap:8px}
+  .tema-nome{font-size:.82rem}
+}
+
+/* O aviso de cobertura parcial. Mesma caixa escura da legenda, porque e
+   leitura obrigatoria pelo mesmo motivo: sem ela o numero engana. */
+.parcial{max-width:92ch;margin:0 auto var(--vao);background:#3a3d42;color:#fff;
+  border-radius:var(--raio);padding:15px 22px;text-align:center;
+  font-size:.9rem;line-height:1.55;font-weight:500}
+.parcial b{color:#fff;font-weight:700}
+
+/* ---------- tom: dois metodos lado a lado ---------- */
+.tons{max-width:66ch;margin:0 auto;display:grid;gap:17px}
+.tom-bloco{display:grid;gap:7px}
+.tom-rotulo{font-size:.9rem;font-weight:700;text-align:center}
+.tom-par{display:grid;grid-template-columns:11ch 1fr 7ch;align-items:center;gap:11px}
+.tom-metodo{font-size:.78rem;color:var(--suave);text-align:right}
+.tom-trilha{background:var(--cinza);border-radius:999px;height:15px;overflow:hidden}
+.tom-barra{display:block;height:100%;border-radius:999px;min-width:3px;background:#b9bcc2}
+.tom-barra.ia{background:var(--vermelho)}
+.tom-pct{font-size:.82rem;font-variant-numeric:tabular-nums;text-align:left;color:var(--tinta);font-weight:600}
+
+/* A matriz de confronto. Linha e o dicionario, coluna e a IA. */
+.matriz{margin:var(--vao) auto 0;border-collapse:collapse;font-size:.85rem;min-width:0}
+.matriz th,.matriz td{padding:8px 13px;text-align:center;border:1px solid var(--linha);
+  white-space:nowrap}
+.matriz thead th{font-size:.7rem;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--suave);font-weight:600}
+.matriz tbody th{text-align:right;font-weight:600;font-size:.82rem}
+.matriz td.igual{background:var(--cinza);font-weight:700}
+.matriz td.destaque{background:var(--vermelho-fraco);font-weight:700;color:var(--vermelho)}
+.matriz caption{caption-side:top;font-size:.8rem;color:var(--suave);padding-bottom:9px}
+/* a matriz rola DENTRO de si mesma. Sem isto ela tem 456px num espaco de 343
+   no celular, vaza dos dois lados e arrasta a pagina inteira na horizontal. */
+.envolta-matriz{display:flex;justify-content:center;overflow-x:auto;
+  max-width:100%;padding-bottom:4px}
+@media (max-width:560px){
+  .matriz th,.matriz td{padding:6px 9px;font-size:.78rem}
+  .matriz tbody th,.matriz thead th{font-size:.7rem}
+}
+
+/* ---------- tabela ---------- */
+table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:620px}
+th,td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--linha);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{font-size:.71rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--suave);white-space:normal}
+tbody tr:hover{background:var(--papel-3)}
+td .barrinha{display:inline-block;height:7px;border-radius:2px;vertical-align:middle}
+
+/* ---------- drill-down ---------- */
+/* As fichas e os rotulos dos passos centram como o resto da pagina. Estavam
+   encostados a esquerda enquanto titulo, texto e botao centravam, e a coluna
+   inteira parecia torta a partir do passo 1. */
+.trilha{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;margin-bottom:12px}
+#corpo-materias{max-width:92ch;margin-inline:auto}
+
+/* ---------- busca manual ---------- */
+.busca{display:flex;justify-content:center;margin-bottom:14px}
+.busca input{font:inherit;font-size:.92rem;width:min(100%,42ch);padding:10px 15px;
+  border:1px solid var(--linha);border-radius:999px;background:var(--papel-2);
+  color:var(--tinta);text-align:center}
+.busca input::placeholder{color:var(--suave)}
+.busca input:focus{outline:none;border-color:var(--vermelho);background:var(--cartao)}
+.vazio{text-align:center;color:var(--suave);font-size:.92rem;padding:22px 0}
+.vazio b{color:var(--tinta)}
+/* o trecho que casou, dentro da manchete */
+.casou{background:var(--vermelho-fraco);border-radius:3px;padding:0 2px;
+  box-shadow:inset 0 -1px 0 var(--vermelho)}
+.ficha{font:500 .82rem var(--display);padding:6px 13px;border-radius:999px;border:1px solid var(--linha);background:var(--papel-2);color:var(--tinta);cursor:pointer}
+.ficha:hover{border-color:var(--suave)}
+.ficha[aria-pressed="true"]{background:var(--tinta);color:var(--papel);border-color:var(--tinta)}
+.ficha:focus-visible{outline:2px solid var(--marca);outline-offset:2px}
+.passo{font-size:.71rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--suave);margin:0 0 6px;text-align:center}
+.conta{font-size:.84rem;color:var(--suave);margin-bottom:10px;text-align:center}
+.lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px}
+.item{background:var(--papel-2);border:1px solid var(--linha);border-radius:8px;padding:11px 13px;display:flex;gap:12px;align-items:flex-start}
+.item:hover{border-color:var(--suave)}
+.item .quando{font-family:var(--mono);font-size:.74rem;color:var(--suave);white-space:nowrap;padding-top:2px}
+.item .corpo{min-width:0;flex:1}
+.item .manchete{font-size:.9rem;line-height:1.4;text-decoration:none}
+.item .manchete:hover{text-decoration:underline;text-decoration-color:var(--marca)}
+.item .meta{margin-top:4px;font-size:.74rem;color:var(--suave);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pastilha{font-size:.68rem;font-weight:600;padding:1px 7px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+.p-lula{color:var(--lula)} .p-flavio{color:var(--flavio)}
+.p-neg{color:var(--excesso)} .p-pos{color:var(--flavio)} .p-neu{color:var(--suave)}
+.mais{margin-top:12px;font:500 .84rem var(--display);padding:9px 16px;border-radius:8px;border:1px solid var(--linha);background:var(--papel-2);color:var(--tinta);cursor:pointer;width:100%}
+.mais:hover{border-color:var(--suave)}
+.mais:focus-visible{outline:2px solid var(--marca);outline-offset:2px}
+
+/* ---------- episódios: um cartão por assunto, em grade ---------- */
+/* min() no mínimo da coluna: sem ele, um cartão de 300px estoura a página
+   numa janela mais estreita que isso */
+#episodios{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:14px}
+.episodio{background:var(--papel-2);border:1px solid var(--linha);border-radius:10px;padding:13px 15px;min-width:0}
+.ep-cabeca{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.ep-cabeca b{font-size:.95rem}
+.ep-nums{font-size:.78rem;color:var(--suave);margin:4px 0 6px}
+.ep-nums .num{color:var(--tinta);font-weight:500}
+
+/* ---------- resultado oficial ---------- */
+#resultado-oficial{margin:18px auto 22px;max-width:92ch}
+.res-faixa{display:flex;flex-wrap:wrap;gap:12px;max-width:92ch;margin-inline:auto}
+.res-par{flex:1 1 150px;background:var(--papel-2);border:1px solid var(--linha);border-radius:10px;padding:12px 15px}
+.res-nome{font-size:.76rem;text-transform:uppercase;letter-spacing:.05em;color:var(--suave);font-weight:600}
+.res-pct{font-size:1.5rem;font-weight:600;font-variant-numeric:tabular-nums;margin-top:3px}
+.res-votos{font-size:.78rem;color:var(--suave);font-variant-numeric:tabular-nums}
+.res-erro{margin:12px 0 4px;font-size:.9rem}
+.res-fonte{margin:0;font-size:.78rem;color:var(--suave)}
+
+
+/* ---------- a marca: bussola desenhada em CSS, sem imagem ---------- */
+.marca{display:flex;align-items:center;gap:12px;margin:0;grid-column:2}
+.mostrador{position:relative;width:34px;height:34px;flex:none;border-radius:50%;
+  border:5px solid var(--tinta);border-right-color:var(--vermelho);
+  display:flex;align-items:center;justify-content:center}
+.ponteiro{position:absolute;width:17px;height:4px;border-radius:2px;
+  background:var(--vermelho);transform:rotate(-40deg)}
+.eixo{width:8px;height:8px;border-radius:50%;background:var(--vermelho)}
+.nome{margin:0;font-size:clamp(1.7rem,5vw,2.35rem);font-weight:900;
+  letter-spacing:-.06em;line-height:1}
+.nome em{font-style:normal;color:var(--vermelho)}
+
+
+/* ---------- nav e paginas, no padrao do Midiometro ---------- */
+
+.nav{display:flex;gap:8px;grid-column:3;justify-self:end}
+.nav button{font:inherit;font-size:.86rem;font-weight:700;cursor:pointer;
+  padding:9px 20px;border-radius:999px;border:1px solid var(--borda);
+  background:var(--cartao);color:var(--tinta);letter-spacing:.01em}
+.nav button:hover{border-color:var(--vermelho);color:var(--vermelho)}
+.nav button[aria-current="page"]{background:var(--tinta);color:#fff;border-color:var(--tinta);box-shadow:0 2px 10px rgba(0,0,0,.14)}
+.nav button:focus-visible{outline:2px solid var(--vermelho);outline-offset:2px}
+.titulo-pagina{margin:0 0 26px;text-align:center;padding-top:14px}
+
+/* ---------- pagina Sobre ---------- */
+.sobre .texto{margin:0 auto 13px;max-width:92ch;color:var(--tinta);font-size:1.04rem;line-height:1.62}
+.sobre section{margin-bottom:0}
+/* No Sobre os títulos ficavam presos à coluna de texto (72ch) enquanto as
+   grades abaixo ocupavam a largura toda, e o título parecia deslocado.
+   Aqui eles ocupam a largura inteira e vêm centrados, com um filete
+   vermelho acima que dá a hierarquia que faltava. */
+.sobre .cabeca{max-width:none;width:auto;margin:0 0 var(--vao);flex-direction:column;
+  align-items:center;text-align:center;gap:0}
+.sobre .cabeca h2{font-size:1.5rem;letter-spacing:-.02em}
+.sobre .texto{text-align:center}
+.sobre .titulo-pagina{text-align:center}
+.sobre .titulo-pagina .subtitulo{margin-inline:auto}
+.sobre h3{margin:0 0 6px;font-size:.97rem;font-weight:700}
+/* 4 fontes em 2x2 e 3 limites em 3 colunas: auto-fit deixava uma caixa
+   órfã numa linha só, que lia como erro de layout */
+.fontes{display:grid;gap:14px;grid-template-columns:repeat(2,1fr)}
+.limites{display:grid;gap:14px;grid-template-columns:repeat(3,1fr)}
+@media (max-width:760px){.fontes,.limites{grid-template-columns:1fr}}
+.fonte,.limite{background:var(--cartao);border:1px solid var(--borda);
+  border-radius:var(--raio);padding:16px 18px;position:relative;overflow:hidden}
+.fonte::before,.limite::before{content:"";position:absolute;inset:0 0 auto 0;
+  height:3px;background:var(--vermelho)}
+.fonte h3,.limite h3{color:var(--tinta)}
+.fonte p,.limite p{margin:0 0 8px;font-size:.89rem;color:var(--apagado)}
+.fonte p:last-child,.limite p:last-child{margin-bottom:0}
+.fonte .ressalva{font-size:.82rem;padding-top:8px;border-top:1px solid var(--borda)}
+/* o bloco centra; os itens seguem alinhados à esquerda entre si,
+   senão os números 01..05 dançariam conforme o tamanho do texto */
+.passos{list-style:none;margin:0 auto;padding:0;display:grid;gap:14px;
+  max-width:64ch;text-align:left}
+.passos li{display:flex;gap:14px;align-items:flex-start}
+.passos .num{font-family:var(--mono);font-size:.8rem;font-weight:500;
+  color:var(--vermelho);padding-top:2px;flex:none}
+.passos strong{display:block;font-size:.94rem;margin-bottom:2px}
+.passos span:not(.num){font-size:.89rem;color:var(--apagado)}
+
+
+/* ---------- guia das secoes ---------- */
+.guia{margin:26px 0 30px;padding-top:24px;border-top:2px solid var(--vermelho)}
+.guia-titulo{margin:0 0 var(--vao);font-size:.72rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.14em;color:var(--apagado);
+  text-align:center}
+/* 6 atalhos: 3+3 fecha o retângulo; auto-fit deixava 4 em cima e 2 sobrando */
+.guia-itens{display:grid;gap:10px;grid-template-columns:repeat(3,1fr)}
+@media (max-width:860px){.guia-itens{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:520px){.guia-itens{grid-template-columns:1fr}}
+.guia-itens a{display:block;padding:12px 14px;border:1px solid var(--borda);
+  border-radius:var(--raio);text-decoration:none;color:inherit;background:var(--cartao)}
+.guia-itens a:hover{border-color:var(--vermelho);background:var(--vermelho-fraco)}
+.guia-itens a:focus-visible{outline:2px solid var(--vermelho);outline-offset:2px}
+.guia-itens b{display:block;font-size:.9rem;margin-bottom:3px}
+.guia-itens span{display:block;font-size:.81rem;color:var(--apagado);line-height:1.4}
+
+
+/* ---------- caixa de explicacao do KPI ---------- */
+.kpi{position:relative}
+.kpi-botao{display:flex;flex-direction:column;gap:5px;align-items:flex-start;
+  width:100%;text-align:left;background:none;border:0;padding:0;font:inherit;
+  color:inherit;cursor:pointer}
+.kpi-botao:focus-visible{outline:2px solid var(--vermelho);outline-offset:4px;border-radius:6px}
+.kpi-pista{display:flex;align-items:center;gap:4px;margin-top:10px;
+  font-size:.72rem;font-weight:600;color:var(--vermelho)}
+.kpi-pista svg{width:13px;height:13px;transition:transform .15s}
+.kpi-botao[aria-expanded="true"] .kpi-pista svg{transform:rotate(180deg)}
+/* a caixa flutua sobre o conteudo: empurrar a grade faria os quatro cartoes
+   pularem de altura a cada clique */
+.explica{position:absolute;top:calc(100% + 6px);left:0;z-index:20;
+  width:min(420px,calc(100vw - 32px));background:var(--cartao);
+  border:1px solid var(--tinta);border-radius:var(--raio);padding:15px 17px;
+  box-shadow:0 8px 28px rgba(0,0,0,.14)}
+.explica p{margin:0 0 9px;font-size:.85rem;line-height:1.5;color:var(--apagado)}
+.explica p:last-child{margin-bottom:0}
+.explica b{color:var(--tinta)}
+.explica code{font-family:var(--mono);font-size:.78rem;background:var(--cinza);
+  padding:1px 5px;border-radius:4px;color:var(--tinta)}
+.ex-oque{color:var(--tinta)!important;font-weight:500}
+.ex-conta{margin:11px 0;padding:11px 0;border-top:1px solid var(--borda);
+  border-bottom:1px solid var(--borda)}
+.ex-conta > b{display:block;font-size:.72rem;text-transform:uppercase;
+  letter-spacing:.1em;color:var(--apagado);margin-bottom:7px}
+.ex-ressalva{font-size:.82rem!important}
+/* o ultimo cartao abriria para fora da tela */
+.kpis > .kpi:last-child .explica{left:auto;right:0}
+
+
+/* ---------- dica: tooltip proprio, no padrao do Midiometro ----------
+   O <title> nativo do SVG demora ~1s para aparecer, nao formata numero e
+   nao da para estilizar. Esta camada substitui os sete que havia. */
+.dica{position:fixed;z-index:40;pointer-events:none;opacity:0;
+  transition:opacity .09s;background:var(--tinta);color:#fff;
+  padding:8px 11px;border-radius:7px;font-size:.78rem;line-height:1.45;
+  box-shadow:0 6px 22px rgba(0,0,0,.22);max-width:260px}
+.dica[data-vis="1"]{opacity:1}
+.dica b{font-weight:700}
+.dica .d-val{font-family:var(--mono);font-weight:500}
+.dica .d-peq{display:block;margin-top:3px;font-size:.7rem;opacity:.75}
+/* alvo de mouse maior que a marca, para nao exigir pontaria */
+svg [data-dica]{cursor:default}
+/* só as marcas visíveis ganham realce; uma faixa transparente de captura
+   com contorno vira um retângulo preto em cima do gráfico */
+svg circle[data-dica]:hover{stroke:var(--tinta);stroke-width:1.5;paint-order:stroke}
+
+
+/* ---------- abrir a lista de materias ----------
+   E a secao mais pesada da pagina. Quem veio pelos indicadores nao precisa
+   dela, entao ela comeca fechada, mesma logica das abas do Midiometro, em
+   que a lista e uma vista que se escolhe. */
+.abrir-materias{display:flex;margin:0 auto 4px;align-items:center;gap:9px;font:inherit;
+  font-size:.86rem;font-weight:600;cursor:pointer;padding:10px 16px;
+  border:1px solid var(--borda);border-radius:999px;background:var(--cartao);
+  color:var(--tinta)}
+.abrir-materias .lupa{width:16px;height:16px;flex:none;color:var(--vermelho)}
+.abrir-materias:hover{border-color:var(--vermelho);color:var(--vermelho)}
+.abrir-materias:focus-visible{outline:2px solid var(--vermelho);outline-offset:2px}
+.abrir-materias svg{width:15px;height:15px;transition:transform .15s}
+.abrir-materias[aria-expanded="true"] svg{transform:rotate(180deg)}
+
+
+/* o nome técnico fica, mas vem com a pergunta que ele responde, em
+   português comum, para quem nunca viu o termo */
+.h2-glosa{display:block;font-size:.84rem;font-weight:400;color:var(--apagado);
+  margin-top:3px;letter-spacing:0}
+
+/* ---------- cartão de episódio ampliado ---------- */
+/* o cartão inteiro é um botão: clicar amplia e esconde os outros cinco */
+.ep-abrir{display:block;width:100%;text-align:left;background:none;border:0;
+  padding:0;font:inherit;color:inherit;cursor:pointer}
+.ep-abrir:focus-visible{outline:2px solid var(--vermelho);outline-offset:4px;border-radius:6px}
+.ep-lupa{display:block;margin-top:6px;font-size:.72rem;font-weight:600;color:var(--vermelho);opacity:0}
+.ep-abrir:hover .ep-lupa,.ep-abrir:focus-visible .ep-lupa{opacity:1}
+.episodio:hover{border-color:var(--apagado)}
+/* ampliado: uma coluna só, ocupando a largura toda */
+#episodios.tem-grande{grid-template-columns:1fr}
+.ep-grande{padding:18px 20px}
+.ep-grande .ep-cabeca b{font-size:1.1rem}
+.ep-fechar{margin-left:auto;font:inherit;font-size:.78rem;font-weight:600;cursor:pointer;
+  background:none;border:1px solid var(--borda);border-radius:999px;padding:5px 13px;color:var(--tinta)}
+.ep-fechar:hover{border-color:var(--vermelho);color:var(--vermelho)}
+.ep-pe{margin:8px 0 0;font-size:.78rem;color:var(--apagado)}
+
+
+/* um tracejado discreto avisa que o termo tem explicação */
+th.tem-glossario{cursor:help;text-decoration:underline dotted var(--apagado);
+  text-underline-offset:3px}
+th.tem-glossario:hover{color:var(--tinta)}
+
+/* a primeira seção do Sobre abre a página: sem divisória acima dela */
+.sem-linha{border-top:0;padding-top:30px}
+
+/* ---------- rodapé ---------- */
+footer{display:flex;flex-wrap:wrap;gap:6px 24px;justify-content:space-between;
+  align-items:baseline;margin-top:40px;padding-top:20px;border-top:2px solid var(--vermelho)}
+footer p{margin:0;font-size:.82rem;color:var(--apagado)}
+.rodape-marca b{color:var(--tinta);font-weight:700}
+
+/* ---------- nota ---------- */
+.nota{background:var(--papel-3);border:1px solid var(--linha);border-radius:10px;padding:18px 20px}
+.nota ul{margin:10px 0 0;padding-left:1.1em;display:flex;flex-direction:column;gap:7px;font-size:.86rem;color:var(--suave)}
+.nota li b{color:var(--tinta);font-weight:600}
+footer{padding-block:24px 34px;border-top:1px solid var(--linha);font-size:.78rem;color:var(--suave);display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:560px){
+  .item{flex-direction:column;gap:5px}
+  .item .quando{padding-top:0}
+}
+/* O cabecalho e uma grade de tres colunas com a nav presa na terceira. No
+   celular a marca estoura a primeira coluna e empurra a nav para fora da
+   tela: ela comecava em x=249 num visor de 375 e ia ate 420, arrastando a
+   pagina inteira na horizontal. Empilhado, as duas centram. */
+@media (max-width:560px){
+  header{grid-template-columns:1fr;justify-items:center;gap:13px;
+    padding-block:22px 10px}
+  /* As DUAS precisam soltar a coluna. A marca esta presa na 2 e a nav na 3
+     pela grade de tres colunas do desktop; mantida qualquer uma delas, a
+     grade de uma coluna cria colunas implicitas e as duas ficam lado a lado
+     em vez de empilhadas. Soltar so a nav nao resolveu nada. */
+  .marca{grid-column:auto;justify-self:center}
+  .nav{grid-column:auto;justify-self:center}
+}
+</style>
+</head>
+<body>
+<div class="marca-barra"></div>
+<div class="envolve">
+
+  <header>
+    <div class="marca">
+      <div class="mostrador" aria-hidden="true">
+        <span class="ponteiro"></span><span class="eixo"></span>
+      </div>
+      <p class="nome"><em>Midiô</em>metro</p>
+    </div>
+    <nav class="nav" aria-label="Seções">
+      <button type="button" data-pagina="radar" aria-current="page">Radar</button>
+      <button type="button" data-pagina="sobre">Sobre</button>
+    </nav>
+  </header>
+
+  <div class="titulo-pagina">
+    <h1>Radar da Cobertura do 2º Turno</h1>
+    <p class="subtitulo">Como G1, Folha, CNN Brasil e UOL cobriram o 2º turno de 2026, medido contra o que o eleitor de fato procurou.</p>
+    <div class="carimbo" id="carimbo"></div>
+  </div>
+
+<div id="pagina-radar">
+
+
+  <div class="kpis" id="kpis"></div>
+
+  <nav class="guia" aria-label="O que há neste painel">
+    <p class="guia-titulo">O que há neste painel</p>
+    <div class="guia-itens">
+      <a href="#secao-descompasso"><b>Descompasso de agenda</b>
+        <span>A distância entre o que a imprensa cobriu e o que o público procurou.</span></a>
+      <a href="#secao-share"><b>Share of voice</b>
+        <span>Quanto cada candidato foi citado, veículo por veículo.</span></a>
+      <a href="#secao-tema" data-se="secao-tema"><b>Distribuição por tema</b>
+        <span>Sobre o que a imprensa falava quando falava dos candidatos.</span></a>
+      <a href="#secao-tom2" data-se="secao-tom2"><b>O tom, por dois métodos</b>
+        <span>Onde o dicionário e a IA leem a mesma manchete de outro jeito.</span></a>
+      <a href="#secao-fases" data-se="secao-fases"><b>Antes e depois</b>
+        <span>O que aconteceu com o equilíbrio quando o resultado saiu.</span></a>
+      <a href="#secao-episodios" data-se="secao-episodios"><b>Episódio a episódio</b>
+        <span>Seis assuntos: quem puxou quem, a imprensa ou o público.</span></a>
+      <a href="#secao-pesquisas" data-se="secao-pesquisas"><b>As pesquisas</b>
+        <span>O que os institutos diziam, e o que a urna disse.</span></a>
+      <a href="#secao-materias"><b>Da cobertura à matéria</b>
+        <span>Descer do número até a manchete que o produziu.</span></a>
+    </div>
+  </nav>
+
+
+  <section id="secao-descompasso">
+    <div class="cabeca"><h2>Descompasso de agenda<span class="h2-glosa">A imprensa falou do que o eleitor estava procurando?</span></h2><svg class="icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 7-7"/><path d="M14 8h6v6"/></svg></div>
+    <p class="achado" id="achado-descompasso"></p>
+    <figure>
+      <div class="rolagem"><div id="halteres"></div></div>
+      <figcaption><b>Como ler:</b> cada linha é um assunto. O círculo cheio marca a fatia que ele ocupou nas notícias; o vazado, a fatia que ocupou nas buscas do Google. Quanto mais longo o traço entre os dois, mais a imprensa e o público discordaram sobre a importância daquele assunto. A diferença é medida em <b>pontos percentuais</b>: 10 pontos querem dizer que o assunto ocupou 10% a mais do espaço de um lado do que do outro.</figcaption>
+    </figure>
+    <figure style="margin-top:26px">
+      <div class="rolagem"><div id="serie"></div></div>
+      <figcaption id="legenda-serie"></figcaption>
+    </figure>
+    <div id="bloco-arco" hidden style="margin-top:28px">
+      <h3 class="sub-secao">Nos dias de votação, o público quer o processo</h3>
+      <p class="achado" id="achado-arco" style="margin-top:0"></p>
+      <div class="rolagem"><table id="tabela-arco"></table></div>
+    </div>
+  </section>
+
+  <section id="secao-share">
+    <div class="cabeca"><h2>Share of voice e equilíbrio<span class="h2-glosa">Quanto espaço cada candidato ocupou, veículo por veículo</span></h2><svg class="icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></div>
+    <p class="achado" id="achado-veiculos"></p>
+    <div class="rolagem"><table id="tabela-veiculos"></table></div>
+  </section>
+
+  <section id="secao-tema" hidden>
+    <div class="cabeca"><h2>Distribuição por tema<span class="h2-glosa">Sobre o que a imprensa falava quando falava dos candidatos</span></h2><svg class="icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M3 12h12M3 18h7"/></svg></div>
+    <p class="achado" id="achado-tema"></p>
+    <div class="parcial" id="aviso-tema" hidden></div>
+    <figure>
+      <div class="temas" id="barras-tema"></div>
+      <figcaption id="legenda-tema"></figcaption>
+    </figure>
+  </section>
+
+  <section id="secao-tom2" hidden>
+    <div class="cabeca"><h2>O tom, por dois métodos<span class="h2-glosa">O dicionário e a IA leram as mesmas manchetes e discordaram</span></h2><svg class="icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M5 8l7-5 7 5"/><circle cx="12" cy="16" r="3"/></svg></div>
+    <p class="achado" id="achado-tom2"></p>
+    <div class="parcial" id="aviso-tom2" hidden></div>
+    <figure>
+      <div class="tons" id="barras-tom2"></div>
+      <div class="envolta-matriz"><table class="matriz" id="matriz-tom2"></table></div>
+      <figcaption id="legenda-tom2"></figcaption>
+    </figure>
+  </section>
+
+  <section id="secao-fases" hidden>
+    <div class="cabeca"><h2>Antes e depois do resultado</h2><svg class="icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0118 0"/><path d="M12 12l5-3"/></svg></div>
+    <p class="achado" id="achado-fases"></p>
+    <div class="rolagem"><table id="tabela-fases"></table></div>
+    <figure style="margin-top:24px">
+      <div class="rolagem"><div id="inclinacao"></div></div>
+      <figcaption><b>Como ler:</b> cada linha é um veículo ligando dois momentos. À esquerda, o período entre turnos. À direita, o dia seguinte à apuração. São dois momentos, e não uma trajetória contínua.</figcaption>
+    </figure>
+  </section>
+
+  <section id="secao-episodios" hidden>
+    <div class="cabeca"><h2>Episódio a episódio<span class="h2-glosa">Seis assuntos do período, e quem reagiu primeiro</span></h2><svg class="icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 12l5-3"/><path d="M12 3v2"/></svg></div>
+    <p class="achado" id="achado-episodios"></p>
+    <div id="episodios"></div>
+  </section>
+
+  <section id="secao-pesquisas" hidden>
+    <div class="cabeca"><h2>O que as pesquisas diziam</h2><svg class="icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 12l4-2"/></svg></div>
+    <p class="achado" id="achado-pesquisas"></p>
+    <div id="resultado-oficial"></div>
+    <figure><div class="rolagem"><div id="grafico-pesquisas"></div></div>
+      <figcaption><b>Como ler:</b> cada ponto é uma pesquisa publicada. A cor diz o candidato e o traço diz o instituto. Os valores foram lidos das próprias manchetes e conferidos entre os quatro veículos.</figcaption>
+    </figure>
+    <div class="rolagem" style="margin-top:20px"><table id="tabela-pesquisas"></table></div>
+  </section>
+
+  <section id="secao-materias">
+    <div class="cabeca"><h2>Da cobertura à matéria</h2></div>
+    <p class="achado">Escolha um veículo, depois um candidato, para chegar às manchetes que sustentam os números acima.</p>
+    <button type="button" class="abrir-materias" id="abrir-materias"
+            aria-expanded="false" aria-controls="corpo-materias">
+      <svg class="lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+           aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <span id="abrir-materias-texto">Abrir a lista de matérias</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <div id="corpo-materias" hidden>
+    <p class="passo">1 · Veículo</p>
+    <div class="trilha" id="trilha-veiculo"></div>
+    <p class="passo">2 · Candidato</p>
+    <div class="trilha" id="trilha-candidato"></div>
+    <p class="passo">3 · Busca livre</p>
+    <div class="busca">
+      <input type="search" id="busca-materias" autocomplete="off"
+             placeholder="Procure uma palavra na manchete"
+             aria-label="Procurar uma palavra nas manchetes">
+    </div>
+    <p class="conta" id="conta-materias"></p>
+    <ul class="lista" id="lista-materias"></ul>
+    <button class="mais" id="botao-mais" hidden>Mostrar mais</button>
+    </div>
+  </section>
+
+
+</div><!-- fim #pagina-radar -->
+
+<div id="pagina-sobre" class="sobre" hidden>
+
+  <section class="sem-linha">
+    <div class="cabeca"><h2>O que este painel responde</h2></div>
+    <p class="texto">Entre os dois turnos de 2026, os quatro maiores portais de notícia do
+    país publicaram cerca de mil matérias por dia. Ninguém lê isso tudo. A pergunta que
+    sobra é fácil de enunciar e difícil de responder no olho. <b>A cobertura foi equilibrada
+    entre os dois candidatos? E ela acompanhou o que o eleitor estava procurando?</b></p>
+    <p class="texto">Aqui as duas coisas aparecem lado a lado, dia a dia. De um lado o que
+    saiu nos portais. Do outro, o que as pessoas digitaram no Google. A distância entre as
+    duas é o que o painel mede.</p>
+  </section>
+
+  <section>
+    <div class="cabeca"><h2>De onde vêm os dados</h2></div>
+    <div class="fontes">
+      <div class="fonte">
+        <h3>As notícias</h3>
+        <p>O Midiômetro lê os feeds oficiais de <b>G1, Folha de S.Paulo, CNN Brasil e
+        UOL</b> três vezes por dia. Entre 4 e 26 de outubro isso deu
+        <span id="totalNoticias">—</span> notícias.</p>
+        <p class="ressalva">Opinião, vídeo, ao-vivo e podcast não entram nos indicadores.
+        Coluna assinada mede o julgamento de quem escreve, que é outra pergunta.</p>
+      </div>
+      <div class="fonte">
+        <h3>A busca do público</h3>
+        <p>Google Trends, Brasil, no mesmo período, dia a dia.</p>
+        <p class="ressalva">O número do Trends é <b>relativo</b>. O 100 marca o dia de maior
+        busca daquela consulta, e não uma quantidade de pessoas. Por isso duas consultas
+        diferentes não estão na mesma escala e não podem ser somadas.</p>
+      </div>
+      <div class="fonte">
+        <h3>O resultado da eleição</h3>
+        <p>Dados abertos do <b>TSE</b>, votação por candidato e município. De tudo o que
+        está aqui, é a única medida com resposta certa.</p>
+        <p class="ressalva">Conferimos a soma contra o 1º turno divulgado pela imprensa.
+        Bate: Flávio 47,03% e Lula 45,16%.</p>
+      </div>
+      <div class="fonte">
+        <h3>As pesquisas</h3>
+        <p>Os números saíram das <b>próprias manchetes</b> da base: Datafolha, Quaest,
+        Real Time e Futura. Como os quatro veículos noticiam a mesma pesquisa, um confere o
+        outro.</p>
+        <p class="ressalva">Falta a margem de erro e o tamanho da amostra, que não cabem numa
+        manchete. Para série histórica, a fonte certa é o instituto.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="cabeca"><h2>Como funciona</h2></div>
+    <ol class="passos">
+      <li><span class="num">01</span><div>
+        <strong>Coleta</strong>
+        <span>Três vezes por dia o sistema lê os feeds dos quatro portais e guarda cada
+        manchete com o link da matéria original.</span>
+      </div></li>
+      <li><span class="num">02</span><div>
+        <strong>Recorte</strong>
+        <span>Fica só o que é notícia factual, no período entre turnos. A data de cada
+        matéria é a de Brasília, não a do servidor.</span>
+      </div></li>
+      <li><span class="num">03</span><div>
+        <strong>Identificação</strong>
+        <span>Cada manchete passa por quatro termos: Lula, Flávio Bolsonaro, eleições e
+        TSE. A busca casa palavra inteira. Sem isso, "ação" contaria dentro de
+        "apresentação".</span>
+      </div></li>
+      <li><span class="num">04</span><div>
+        <strong>Comparação</strong>
+        <span>A fatia de cada termo na imprensa vai contra a fatia dele na busca do
+        público, dia a dia.</span>
+      </div></li>
+      <li><span class="num">05</span><div>
+        <strong>Indicadores</strong>
+        <span>Daí saem os quatro números do topo do Radar. Clique em qualquer um deles para
+        ver a conta.</span>
+      </div></li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="cabeca"><h2>Limitações da pesquisa</h2></div>
+    <div class="limites">
+      <div class="limite">
+        <h3>Volume não é viés</h3>
+        <p>Cobrir mais um candidato não significa favorecê-lo. O painel mede para onde a
+        atenção foi. A intenção de quem escreveu fica fora do alcance.</p>
+      </div>
+      <div class="limite">
+        <h3>O tom sai da manchete</h3>
+        <p>A manchete não é a matéria. O tom sai de um dicionário de palavras, que em geral
+        é limitado por não entender possível ironia.</p>
+      </div>
+      <div class="limite">
+        <h3>A escolha do termo pesa</h3>
+        <p>Medir a busca por "Flávio Bolsonaro" ou por "Bolsonaro" muda o resultado em mais
+        de 20 pontos. Por isso o indicador principal aparece como faixa, e nunca como
+        número único.</p>
+      </div>
+    </div>
+  </section>
+
+</div><!-- fim #pagina-sobre -->
+
+
+  <footer>
+    <p class="rodape-marca"><b>Midiômetro</b>, projeto de Ofélia Mirella dos Reis</p>
+    <p class="rodape-dados"><span id="rodape-gerado"></span></p>
+  </footer>
+
+</div>
+
+<script>
+
+/* ---------- a dica, uma so para a pagina inteira ---------- */
+const dica = Object.assign(document.createElement("div"), { className: "dica" });
+dica.setAttribute("role", "status");
+document.body.appendChild(dica);
+
+function mostrarDica(html, ev){
+  dica.innerHTML = html;
+  dica.dataset.vis = "1";
+  posicionarDica(ev);
+}
+function posicionarDica(ev){
+  const r = dica.getBoundingClientRect();
+  // acima do cursor por padrao; abaixo quando nao cabe no topo
+  let x = ev.clientX - r.width / 2;
+  let y = ev.clientY - r.height - 12;
+  if (y < 6) y = ev.clientY + 16;
+  x = Math.max(8, Math.min(x, window.innerWidth - r.width - 8));
+  dica.style.left = x + "px";
+  dica.style.top = y + "px";
+}
+function esconderDica(){ dica.dataset.vis = "0"; }
+
+/* Liga a dica a tudo que tiver data-dica, inclusive ao que for desenhado
+   depois: um listener so no documento, em vez de um por marca. */
+document.addEventListener("pointerover", e => {
+  const alvo = e.target.closest ? e.target.closest("[data-dica]") : null;
+  if (alvo) mostrarDica(alvo.getAttribute("data-dica"), e);
+});
+document.addEventListener("pointermove", e => {
+  if (dica.dataset.vis === "1") posicionarDica(e);
+});
+document.addEventListener("pointerout", e => {
+  if (e.target.closest && e.target.closest("[data-dica]")) esconderDica();
+});
+/* no celular nao ha hover: o toque mostra e o proximo toque fora esconde */
+document.addEventListener("touchstart", e => {
+  const alvo = e.target.closest ? e.target.closest("[data-dica]") : null;
+  if (alvo) mostrarDica(alvo.getAttribute("data-dica"), e.touches[0]);
+  else esconderDica();
+}, { passive: true });
+window.addEventListener("scroll", esconderDica, { passive: true });
+
+
+const D = __DADOS__;
+
+const pct = (x, casas = 1) => (100 * x).toFixed(casas).replace(".", ",") + "%";
+const num = (n) => n.toLocaleString("pt-BR");
+const vir = (x, casas = 3) => x.toFixed(casas).replace(".", ",");
+const diaCurto = (d) => d.slice(8, 10) + "/" + d.slice(5, 7);
+// Cor por veiculo, identica a do Midiometro. Quatro matizes com
+// luminosidades diferentes entre si: continuam separaveis em impressao
+// monocromatica e para quem tem daltonismo.
+const corVeiculo = (slug) => `var(--c-${slug}, var(--apagado))`;
+
+const corDe = (c) => c === "lula" ? "var(--lula)" : c === "flavio" ? "var(--flavio)" : "var(--suave)";
+const esc = (s) => String(s).replace(/[&<>"]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]));
+
+/* ---------------- carimbo e KPIs ---------------- */
+const r = D.recorte;
+document.getElementById("carimbo").innerHTML = [
+  `<span class="selo">recorte <b>${diaCurto(r.inicio)} a ${diaCurto(r.fim)}</b></span>`,
+  `<span class="selo"><b>${num(r.noticias)}</b> notícias factuais</span>`,
+  `<span class="selo">4 veículos</span>`,
+  `<span class="selo">completo até <b>${diaCurto(r.ultimo_completo)}</b></span>`,
+].join("");
+
+const p = D.periodo;
+const equilibrios = D.veiculos.map(v => v.equilibrio).filter(x => x != null);
+const flavio = p && p.termos.find(t => t.chave === "flavio");
+const lula = p && p.termos.find(t => t.chave === "lula");
+const totalL = D.veiculos.reduce((s, v) => s + v.lula, 0);
+const totalF = D.veiculos.reduce((s, v) => s + v.flavio, 0);
+
+// Cada KPI abre uma caixa com tres partes: o que e, como se calcula com os
+// numeros DESTE recorte (para a conta poder ser refeita a mao), e o que
+// atrapalha. Clique e nao hover: ha texto para ler.
+const EXPLICA = {
+  descompasso: {
+    oque: "Imprensa e público prestaram atenção nas mesmas coisas? Este número " +
+          "mede a diferença entre os dois. Zero significa que a cobertura e a " +
+          "busca se distribuíram igual; 1 significa que não tinham nada em comum.",
+    conta: p ? [
+      "Para cada um dos quatro termos, calcula-se a participação dele na imprensa " +
+      "e na busca do público, no mesmo dia.",
+      "O indicador é <b>metade da soma das diferenças</b>, em módulo. O nome técnico " +
+      "disso é distância de variação total.",
+      "Neste recorte: " + p.termos.map(t =>
+        esc(D.rotulos[t.chave]) + " " + pct(t.imprensa) + " na imprensa contra " +
+        pct(t.publico) + " na busca").join("; ") + ".",
+      "Metade da soma dessas diferenças dá <b>" + vir(p.dvt, 3) + "</b>."
+    ] : [],
+    ressalva: "Aparece como faixa (" + (p ? vir(p.dvt_faixa[0],2)+"–"+vir(p.dvt_faixa[1],2) : "—") +
+      ") porque parte da busca por “bolsonaro” se refere ao pai, e não ao candidato. " +
+      "A faixa cobre as três estimativas que fizemos para essa parcela."
+  },
+  equilibrio: {
+    oque: "Um veículo citou os dois candidatos com a mesma frequência? Vale 1 quando " +
+          "cita os dois igual, e vai caindo conforme pende para um lado.",
+    conta: [
+      "Para cada veículo: <code>1 − |menções a Lula − menções a Flávio| ÷ (soma das duas)</code>.",
+      D.veiculos.map(v => esc(v.nome) + " cita Lula em " + num(v.lula) + " e Flávio em " +
+        num(v.flavio) + " → <b>" + vir(v.equilibrio, 3) + "</b>").join("<br>"),
+      "O painel mostra a <b>faixa entre os quatro</b>, não a média."
+    ],
+    ressalva: "A faixa é mais informativa que uma média: somando os quatro veículos, " +
+      "diferenças em sentidos opostos se cancelam e o total fica mais alto que o de " +
+      "qualquer um deles isolado."
+  },
+  share: {
+    oque: "Que fatia do noticiário cada candidato ocupou. Mede o espaço que " +
+          "receberam, não se a notícia era boa ou ruim para eles.",
+    conta: [
+      "Conta-se quantas notícias citam cada nome no título, sobre o total do recorte.",
+      "Lula: " + num(totalL) + " de " + num(r.noticias) + " = <b>" + pct(totalL/r.noticias) + "</b>.",
+      "Flávio Bolsonaro: " + num(totalF) + " de " + num(r.noticias) + " = <b>" + pct(totalF/r.noticias) + "</b>.",
+      "Uma matéria que cite os dois conta nos dois lados."
+    ],
+    ressalva: "Este número mede atenção, não preferência. Cobrir mais um candidato " +
+      "pode ser simplesmente o que o noticiário do dia pedia."
+  },
+  tom: {
+    oque: "Quantas manchetes não trazem palavra de carga positiva nem negativa. " +
+          "Um dicionário de palavras faz essa classificação, manchete por manchete.",
+    conta: D.tom ? [
+      "Cada manchete passa por um léxico em português que soma o peso das palavras " +
+      "com carga conhecida.",
+      "Neutras: <b>" + vir(D.tom.neutro, 1) + "%</b> das manchetes do recorte."
+    ] : [],
+    ressalva: "A manchete não é a matéria. O tom é medido por um dicionário de " +
+      "palavras, que em geral é limitado por não entender possível ironia."
+  }
+};
+
+const caixa = (id) => {
+  const e = EXPLICA[id];
+  return `<div class="explica" id="explica-${id}" hidden>
+    <p class="ex-oque">${e.oque}</p>
+    <div class="ex-conta"><b>Como é calculado</b>${e.conta.map(c => `<p>${c}</p>`).join("")}</div>
+    <p class="ex-ressalva"><b>O que atrapalha.</b> ${e.ressalva}</p>
+  </div>`;
+};
+const cartao = (id, rotulo, valor, glosa, destaque) =>
+  `<div class="kpi${destaque ? " destaque" : ""}">
+      <button type="button" class="kpi-botao" aria-expanded="false" aria-controls="explica-${id}" data-ex="${id}">
+        <span class="rotulo">${rotulo}</span>
+        <span class="valor">${valor}</span>
+        <span class="glosa">${glosa}</span>
+        <span class="kpi-pista">como é calculado <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
+      </button>
+      ${caixa(id)}
+    </div>`;
+
+document.getElementById("kpis").innerHTML = [
+  p ? cartao("descompasso", "Descompasso de agenda",
+      `${vir(p.dvt_faixa[0], 2)}–${vir(p.dvt_faixa[1], 2)}`,
+      `O quanto a imprensa e o público ficaram em assuntos diferentes. Quanto mais perto de zero, mais parecidos.`,
+      true) : "",
+  cartao("equilibrio", "Equilíbrio entre candidatos",
+      `${vir(Math.min(...equilibrios), 2)}–${vir(Math.max(...equilibrios), 2)}`,
+      "Se os dois candidatos apareceram na mesma medida. 1 seria exatamente igual."),
+  cartao("share", "Share of voice",
+      `${pct(totalL / r.noticias)}<span style="font-size:.5em;color:var(--suave)"> / </span>${pct(totalF / r.noticias)}`,
+      "De cada 100 notícias do período, quantas citaram cada candidato."),
+  D.tom ? cartao("tom", "Tom das manchetes", `${vir(D.tom.neutro, 1)}%`,
+      "Manchetes sem palavra de carga positiva ou negativa.") : "",
+].join("");
+
+// um aberto por vez; fecha por Esc ou clique fora
+document.querySelectorAll(".kpi-botao").forEach(b => {
+  b.addEventListener("click", () => {
+    const alvo = document.getElementById("explica-" + b.dataset.ex);
+    const abrindo = alvo.hidden;
+    document.querySelectorAll(".explica").forEach(c => c.hidden = true);
+    document.querySelectorAll(".kpi-botao").forEach(o => o.setAttribute("aria-expanded", "false"));
+    alvo.hidden = !abrindo;
+    b.setAttribute("aria-expanded", String(abrindo));
+    // a caixa abre por baixo do cartão e costuma ficar meio fora da tela;
+    // traz o fim dela para dentro, senão o leitor não vê que abriu
+    if (abrindo) requestAnimationFrame(() => {
+      const r = alvo.getBoundingClientRect();
+      if (r.bottom > window.innerHeight - 12) {
+        window.scrollBy({ top: r.bottom - window.innerHeight + 24, behavior: "smooth" });
+      }
+    });
+  });
+});
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  document.querySelectorAll(".explica").forEach(c => c.hidden = true);
+  document.querySelectorAll(".kpi-botao").forEach(o => o.setAttribute("aria-expanded", "false"));
+});
+document.addEventListener("click", e => {
+  if (e.target.closest(".kpi")) return;
+  document.querySelectorAll(".explica").forEach(c => c.hidden = true);
+  document.querySelectorAll(".kpi-botao").forEach(o => o.setAttribute("aria-expanded", "false"));
+});
+
+if (p) {
+  const el = p.termos.find(t => t.chave === "eleicoes");
+  const ts = p.termos.find(t => t.chave === "tse");
+  const pp = (x) => (x > 0 ? "+" : "") + vir(100 * x, 1) + " pontos";
+  document.getElementById("achado-descompasso").innerHTML =
+    `Entre ${diaCurto(p.de)} e ${diaCurto(p.ate)}, a imprensa dividiu a atenção quase igualmente entre os dois candidatos ` +
+    `(<b>${pct(lula.imprensa)}</b> para Lula e <b>${pct(flavio.imprensa)}</b> para Flávio Bolsonaro), e a busca do público ` +
+    `ficou perto disso: ${pct(lula.publico)} e ${pct(flavio.publico)}. ` +
+    `<b>A cobertura dos candidatos acompanhou o interesse do eleitor</b>, com Flávio em ${pp(flavio.descompasso)} ` +
+    `e Lula em ${pp(lula.descompasso)} ` +
+    `O que sobra fora do lugar é o resto. “Eleições” fica em ${pp(el.descompasso)} e TSE em ${pp(ts.descompasso)}. ` +
+    `a imprensa fala do pleito mais do que o eleitor o procura, durante a campanha. ` +
+    `Incluindo os dias de votação, esse sinal se inverte e cresce.`;
+}
+
+/* ---------------- halteres: imprensa contra publico ---------------- */
+function desenharHalteres() {
+  if (!p) return;
+  const L = 150, R = 700, alto = 52, topo = 26, h = topo + p.termos.length * alto + 34;
+  const x = (v) => L + v / 0.8 * (R - L);
+  const partes = [`<svg viewBox="0 0 760 ${h}" role="img" aria-label="Participação da imprensa e da busca pública, por termo" font-size="12">`];
+  for (let v = 0; v <= 0.8; v += 0.2) {
+    partes.push(`<line x1="${x(v)}" y1="${topo - 8}" x2="${x(v)}" y2="${topo + p.termos.length * alto - 16}" stroke="var(--grade)"/>`);
+    partes.push(`<text x="${x(v)}" y="${h - 14}" text-anchor="middle" fill="var(--suave)">${pct(v, 0)}</text>`);
+  }
+  p.termos.forEach((t, i) => {
+    const y = topo + i * alto + 10;
+    const xi = x(t.imprensa), xp = x(t.publico);
+    const cor = t.descompasso > 0 ? "var(--excesso)" : "var(--falta)";
+    partes.push(`<text x="0" y="${y + 4}" fill="var(--tinta)" font-weight="600">${esc(t.rotulo)}</text>`);
+    partes.push(`<line x1="${xi}" y1="${y}" x2="${xp}" y2="${y}" stroke="${cor}" stroke-width="3"/>`);
+    partes.push(`<circle cx="${xp}" cy="${y}" r="6" fill="var(--papel)" stroke="var(--suave)" stroke-width="2"/>`);
+    partes.push(`<circle cx="${xi}" cy="${y}" r="6" fill="var(--tinta)"/>`);
+    const dir = t.descompasso > 0 ? 1 : -1;
+    partes.push(`<text x="${Math.max(xi, xp) + 14}" y="${y + 4}" fill="${cor}" font-weight="600" font-family="var(--mono)">${(t.descompasso > 0 ? "+" : "") + vir(100 * t.descompasso, 1)} pontos</text>`);
+    // O número com sinal não diz nada a quem chega de fora. A dica traz a
+    // frase: quem falou mais, quem procurou mais, e de quanto foi a diferença.
+    const dif = vir(Math.abs(100 * t.descompasso), 1);
+    const sentido = t.descompasso > 0
+      ? `A imprensa falou mais do que o público procurou`
+      : `O público procurou mais do que a imprensa falou`;
+    partes.push(`<rect x="0" y="${y - 13}" width="760" height="26" fill="transparent" data-dica="&lt;b&gt;${esc(t.rotulo)}&lt;/b&gt;&lt;br&gt;${sentido}&lt;span class='d-peq'&gt;${pct(t.imprensa)} das menções na imprensa · ${pct(t.publico)} das buscas · diferença de ${dif} pontos&lt;/span&gt;"/>`);
+  });
+  partes.push(`<g font-size="11"><circle cx="0" cy="${h - 32}" r="5" fill="var(--tinta)" transform="translate(6,0)"/><text x="18" y="${h - 28}" fill="var(--suave)">imprensa</text><circle cx="96" cy="${h - 32}" r="5" fill="var(--papel)" stroke="var(--suave)" stroke-width="2"/><text x="108" y="${h - 28}" fill="var(--suave)">busca do público</text></g>`);
+  partes.push("</svg>");
+  document.getElementById("halteres").innerHTML = partes.join("");
+}
+desenharHalteres();
+
+/* ---------------- serie diaria ---------------- */
+function desenharSerie() {
+  const pontos = D.serie.filter(s => s.publico && s.completo);
+  if (pontos.length < 2) return;
+  const E = 46, Dx = 646, T = 18, B = 300, h = 340;
+  const passo = (Dx - E) / (pontos.length - 1);
+  const x = (i) => E + i * passo;
+  const y = (v) => B - v / 0.8 * (B - T);
+  const series = [
+    { chave: "lula", lado: "imprensa" }, { chave: "lula", lado: "publico" },
+    { chave: "flavio", lado: "imprensa" }, { chave: "flavio", lado: "publico" },
+  ];
+  const partes = [`<svg viewBox="0 0 760 ${h}" role="img" aria-label="Share diário da imprensa e da busca pública para cada candidato" font-size="12">`];
+  for (let v = 0; v <= 0.8; v += 0.2) {
+    partes.push(`<line x1="${E}" y1="${y(v)}" x2="${Dx}" y2="${y(v)}" stroke="var(--grade)"/>`);
+    partes.push(`<text x="${E - 9}" y="${y(v) + 4}" text-anchor="end" fill="var(--suave)">${pct(v, 0)}</text>`);
+  }
+  pontos.forEach((s, i) => {
+    if (i % 2 === 0 || i === pontos.length - 1)
+      partes.push(`<text x="${x(i)}" y="${B + 20}" text-anchor="middle" fill="var(--suave)">${diaCurto(s.dia)}</text>`);
+  });
+  series.forEach(({ chave, lado }) => {
+    const d = pontos.map((s, i) => (i ? "L" : "M") + x(i).toFixed(1) + "," + y(s[lado][chave]).toFixed(1)).join(" ");
+    const tracejado = lado === "imprensa" ? ' stroke-dasharray="5 4" stroke-opacity=".85"' : "";
+    partes.push(`<path d="${d}" fill="none" stroke="${corDe(chave)}" stroke-width="${lado === "publico" ? 2.4 : 1.5}"${tracejado}/>`);
+    pontos.forEach((s, i) => {
+      partes.push(`<circle cx="${x(i).toFixed(1)}" cy="${y(s[lado][chave]).toFixed(1)}" r="5" fill="${corDe(chave)}" fill-opacity="0" data-dica="&lt;b&gt;${D.rotulos[chave]}&lt;/b&gt;&lt;br&gt;${lado === "publico" ? "busca do público" : "imprensa"} · ${diaCurto(s.dia)}&lt;span class='d-peq'&gt;&lt;span class='d-val'&gt;${pct(s[lado][chave])}&lt;/span&gt; do conjunto&lt;/span&gt;"/><circle cx="${x(i).toFixed(1)}" cy="${y(s[lado][chave]).toFixed(1)}" r="2.6" fill="${corDe(chave)}" pointer-events="none"></circle>`);
+    });
+    const fim = pontos[pontos.length - 1];
+    if (lado === "publico")
+      partes.push(`<text x="${Dx + 10}" y="${y(fim[lado][chave]) + 4}" fill="${corDe(chave)}" font-weight="600">${D.rotulos[chave].split(" ")[0]} ${pct(fim[lado][chave], 0)}</text>`);
+  });
+  partes.push("</svg>");
+  document.getElementById("serie").innerHTML = partes.join("");
+  document.getElementById("legenda-serie").innerHTML =
+    `<b>Como ler:</b> linha cheia é a busca do público, tracejada é a cobertura da imprensa. ` +
+    `<span style="color:var(--lula-claro);font-weight:700">Vinho</span> é Lula, ` +
+    `<span style="color:var(--flavio-claro);font-weight:700">azul</span> é Flávio Bolsonaro. A cor aqui serve só para dizer quem é quem. ` +
+    `Só entram dias com coleta completa.`;
+}
+desenharSerie();
+
+/* ---------------- tabela por veiculo ---------------- */
+(function () {
+  const maior = Math.max(...D.veiculos.map(v => Math.max(v.lula, v.flavio)));
+  const linhas = D.veiculos.map(v => {
+    const barra = (n, cor) => `<span class="barrinha" style="width:${Math.max(2, 46 * n / maior)}px;background:${cor}"></span>`;
+    return `<tr>
+      <td><b>${esc(v.nome)}</b></td>
+      <td class="num">${num(v.noticias)}</td>
+      <td class="num">${barra(v.lula, "var(--lula)")} ${num(v.lula)}</td>
+      <td class="num">${barra(v.flavio, "var(--flavio)")} ${num(v.flavio)}</td>
+      <td class="num">${pct(v.algum / v.noticias)}</td>
+      <td class="num"><b>${vir(v.equilibrio)}</b></td>
+      <td class="num">${vir(v.neutro, 1)}%</td>
+      <td class="num">${v.posicoes_home}</td>
+    </tr>`;
+  }).join("");
+  document.getElementById("tabela-veiculos").innerHTML = `
+    <thead><tr>
+      <th>Veículo</th><th>Notícias</th><th>Lula</th><th>Flávio</th>
+      <th>Citam algum</th><th>Equilíbrio</th><th>Neutras</th><th>Posições na capa</th>
+    </tr></thead><tbody>${linhas}</tbody>`;
+
+  const ord = [...D.veiculos].sort((a, b) => a.equilibrio - b.equilibrio);
+  document.getElementById("achado-veiculos").innerHTML =
+    `Nenhum veículo chega perto de ignorar um candidato: o equilíbrio vai de <b>${vir(ord[0].equilibrio)}</b> ` +
+    `(${esc(ord[0].nome)}) a <b>${vir(ord[ord.length - 1].equilibrio)}</b> (${esc(ord[ord.length - 1].nome)}). ` +
+    `A última coluna existe porque a posição na capa <b>não é comparável entre veículos</b>. ` +
+    `o G1 tem ${D.veiculos.find(v => v.slug === "g1").posicoes_home} posições lidas contra ` +
+    `${D.veiculos.find(v => v.slug === "cnn").posicoes_home} da CNN, então "chegou ao topo" significa coisas diferentes em cada um.`;
+})();
+
+
+/* ---------------- o arco inteiro, com os dois turnos dentro ---------------- */
+if (D.arco && D.periodo) {
+  const A = D.arco;
+  const naCampanha = (chave) => D.periodo.termos.find(t => t.chave === chave).descompasso;
+  const el = A.termos.find(t => t.chave === "eleicoes");
+  const fl = A.termos.find(t => t.chave === "flavio");
+  const lu = A.termos.find(t => t.chave === "lula");
+  const pp = (x) => (x > 0 ? "+" : "") + vir(100 * x, 1) + " pontos";
+  // quem é a maior lacuna e para que lado o indicador se move saem da conta,
+  // nunca de uma frase fixa: já escrevi as duas erradas quando os dados mudaram
+  const maior = [...A.termos].sort((a, b) => Math.abs(b.descompasso) - Math.abs(a.descompasso))[0];
+  const rumo = A.dvt > D.periodo.dvt ? "sobe para" : "cai para";
+  document.getElementById("bloco-arco").hidden = false;
+
+  document.getElementById("achado-arco").innerHTML =
+    `A janela acima exclui de propósito os dias de votação, porque o pico de busca deles achata a escala de todo o resto. ` +
+    `Medido sobre o arco inteiro (${diaCurto(A.de)} a ${diaCurto(A.ate)}), o descompasso ${rumo} <b>${vir(A.dvt)}</b>, ` +
+    `e a maior lacuna passa a ser <b>${esc(maior.rotulo.toLowerCase())}</b>, que sai de ` +
+    `${pp(naCampanha(maior.chave))} na campanha para <b>${pp(maior.descompasso)}</b> aqui. ` +
+    `A de Lula troca de sinal no caminho, de ${pp(naCampanha("lula"))} para ${pp(lu.descompasso)}. ` +
+    `Nos dias de votação o público procura <b>o processo</b> (onde votar, como votar, o resultado) e não os candidatos. ` +
+    `“eleições” ocupa ${pct(el.publico)} da busca contra ${pct(el.imprensa)} da cobertura. ` +
+    `As duas janelas têm normalizações diferentes e <b>não podem ser somadas</b>; cada uma responde uma pergunta.`;
+
+  document.getElementById("tabela-arco").innerHTML = `
+    <thead><tr><th>Termo</th><th>Imprensa</th><th>Público</th><th>Descompasso</th></tr></thead>
+    <tbody>${A.termos.map(t => `<tr>
+      <td><b>${esc(t.rotulo)}</b></td>
+      <td class="num">${pct(t.imprensa)}</td>
+      <td class="num">${pct(t.publico)}</td>
+      <td class="num" style="color:${t.descompasso > 0 ? "var(--excesso)" : "var(--falta)"}">
+        <b>${(t.descompasso > 0 ? "+" : "") + vir(100 * t.descompasso, 1)} pontos</b></td>
+    </tr>`).join("")}</tbody>`;
+}
+
+/* ---------------- antes e depois do resultado ---------------- */
+if (D.fases) {
+  const F = D.fases, b = F.blocos;
+  const primeiro = b[0], meio = b[1], ultimo = b[b.length - 1];
+  document.getElementById("secao-fases").hidden = false;
+
+  // ATENCAO ao mexer aqui: uma versao deste texto afirmava que o equilibrio
+  // "colapsava" depois do resultado e que a simetria durava so enquanto a
+  // disputa estava em aberto. A fase de repercussao tem UM dia. Um dia nao
+  // estabelece tendencia, e a interpretacao nao volta.
+  document.getElementById("achado-fases").innerHTML =
+    `Até a véspera da votação a imprensa manteve os dois candidatos praticamente empatados, com equilíbrio de ` +
+    `<b>${vir(primeiro.equilibrio)}</b>, com ${num(primeiro.lula)} menções a Lula contra ${num(primeiro.flavio)} a Flávio Bolsonaro. ` +
+    `No dia da votação o índice cai a <b>${vir(meio.equilibrio)}</b>, e no dia seguinte a <b>${vir(ultimo.equilibrio)}</b>, ` +
+    `com a razão em <b>${vir(ultimo.razao, 2)} para 1</b>. ` +
+    `<b>Isso descreve aqueles dois dias, e não uma tendência.</b> A repercussão aqui é um único dia, ` +
+    `o dia seguinte à apuração, em que a cobertura se volta para quem venceu, o que é decisão editorial corrente. ` +
+    `Com um ponto só não há série, e o número não sustenta leitura sobre o comportamento das redações. ` +
+    `O recorte do projeto termina aqui, de propósito: o que vem depois já não é o período eleitoral.`;
+
+  document.getElementById("tabela-fases").innerHTML = `
+    <thead><tr><th>Fase</th><th>Janela</th><th>Notícias</th><th>Lula</th><th>Flávio</th><th>Razão</th><th>Equilíbrio</th></tr></thead>
+    <tbody>${b.map(f => `<tr>
+      <td><b>${esc(f.nome)}</b></td><td>${esc(f.janela)}</td>
+      <td class="num">${num(f.noticias)}</td>
+      <td class="num">${num(f.lula)}</td><td class="num">${num(f.flavio)}</td>
+      <td class="num">${f.razao ? vir(f.razao, 2) + "×" : "—"}</td>
+      <td class="num"><b>${f.equilibrio != null ? vir(f.equilibrio) : "—"}</b></td>
+    </tr>`).join("")}</tbody>`;
+
+  // inclinacao: equilibrio de cada veiculo antes e depois
+  const vs = F.por_veiculo.filter(v => v.antes != null && v.depois != null);
+  if (vs.length) {
+    const E = 150, Dx = 400, T = 52, B = 236, h = 282;
+    const piso = Math.min(...vs.flatMap(v => [v.antes, v.depois])) - .06;
+    const y = (q) => B - (q - piso) / (1.005 - piso) * (B - T);
+
+    // Os quatro veiculos ficam a centesimos um do outro entre turnos, entao os
+    // rotulos se empilhariam. Afasta-os ao minimo legivel e liga cada um ao seu
+    // ponto com um fio, em vez de deixar texto sobre texto.
+    const ALTURA_ROTULO = 17;
+    const rotulos = vs.map(v => ({ v, alvo: y(v.depois), yr: y(v.depois) }))
+                      .sort((a, b) => a.alvo - b.alvo);
+    rotulos.forEach((r, i) => {
+      if (i > 0 && r.yr - rotulos[i - 1].yr < ALTURA_ROTULO)
+        r.yr = rotulos[i - 1].yr + ALTURA_ROTULO;
+    });
+
+    const partes = [`<svg viewBox="0 0 760 ${h}" role="img" aria-label="Equilíbrio de cada veículo antes e depois do resultado" font-size="12">`];
+    // o leitor precisa saber o que o eixo significa ANTES de olhar as linhas
+    partes.push(`<text x="380" y="14" text-anchor="middle" fill="var(--tinta)" font-weight="600">Quanto cada veículo citou os dois candidatos na mesma medida</text>`);
+    partes.push(`<text x="380" y="31" text-anchor="middle" fill="var(--suave)" font-size="11">1,00 seria citar os dois exatamente igual · quanto mais baixo, mais a cobertura pendeu para um lado</text>`);
+    [E, Dx].forEach(x => partes.push(`<line x1="${x}" y1="${T - 14}" x2="${x}" y2="${B + 10}" stroke="var(--grade)"/>`));
+    partes.push(`<text x="${E}" y="${B + 30}" text-anchor="middle" fill="var(--suave)">entre turnos</text>`);
+    partes.push(`<text x="${Dx}" y="${B + 30}" text-anchor="middle" fill="var(--suave)">após o resultado</text>`);
+    rotulos.forEach(({ v, alvo, yr }) => {
+      const ya = y(v.antes);
+      partes.push(`<line x1="${E}" y1="${ya}" x2="${Dx}" y2="${alvo}" stroke="${corVeiculo(v.slug)}" stroke-width="2" stroke-opacity=".75"/>`);
+      // a linha toda responde ao mouse, não só as duas pontas
+      partes.push(`<line x1="${E}" y1="${ya}" x2="${Dx}" y2="${alvo}" stroke="transparent" stroke-width="14" data-dica="&lt;b&gt;${esc(v.nome)}&lt;/b&gt;&lt;br&gt;entre turnos &lt;span class='d-val'&gt;${vir(v.antes)}&lt;/span&gt; → dia seguinte &lt;span class='d-val'&gt;${vir(v.depois)}&lt;/span&gt;&lt;span class='d-peq'&gt;${v.antes > v.depois ? "pendeu mais para um lado" : "ficou mais equilibrado"} no dia seguinte&lt;/span&gt;"/>`);
+      partes.push(`<circle cx="${E}" cy="${ya}" r="7" fill="${corVeiculo(v.slug)}" fill-opacity="0" data-dica="&lt;b&gt;${esc(v.nome)}&lt;/b&gt;&lt;br&gt;entre turnos&lt;span class='d-peq'&gt;equilíbrio &lt;span class='d-val'&gt;${vir(v.antes)}&lt;/span&gt;&lt;/span&gt;"/><circle cx="${E}" cy="${ya}" r="4.5" fill="${corVeiculo(v.slug)}" pointer-events="none"></circle>`);
+      partes.push(`<circle cx="${Dx}" cy="${alvo}" r="7" fill="${corVeiculo(v.slug)}" fill-opacity="0" data-dica="&lt;b&gt;${esc(v.nome)}&lt;/b&gt;&lt;br&gt;após o resultado&lt;span class='d-peq'&gt;equilíbrio &lt;span class='d-val'&gt;${vir(v.depois)}&lt;/span&gt; · caiu ${vir(v.antes - v.depois, 3)}&lt;/span&gt;"/><circle cx="${Dx}" cy="${alvo}" r="4.5" fill="${corVeiculo(v.slug)}" pointer-events="none"></circle>`);
+      // o fio so aparece quando o rotulo precisou sair de cima do ponto
+      if (Math.abs(yr - alvo) > 1)
+        partes.push(`<line x1="${Dx + 6}" y1="${alvo}" x2="${Dx + 16}" y2="${yr - 4}" stroke="var(--linha)"/>`);
+      partes.push(`<text x="${Dx + 20}" y="${yr}" fill="var(--tinta)" font-weight="600">${esc(v.nome)} ` +
+        `<tspan font-family="var(--mono)" font-weight="400" fill="var(--suave)">${vir(v.antes)}</tspan>` +
+        `<tspan fill="var(--suave)"> → </tspan>` +
+        `<tspan font-family="var(--mono)" fill="${corVeiculo(v.slug)}">${vir(v.depois)}</tspan></text>`);
+    });
+    partes.push("</svg>");
+    document.getElementById("inclinacao").innerHTML = partes.join("");
+  }
+}
+
+// os institutos vêm em caixa baixa do CSV; nomes próprios na tela
+const INSTITUTO = { "datafolha": "Datafolha", "quaest": "Quaest", "ipec": "Ipec",
+  "atlas": "Atlas", "genial": "Genial", "futura": "Futura",
+  "real time big data": "Real Time Big Data", "paranaet": "Paraná Pesquisas" };
+const inst = n => INSTITUTO[n] || n;
+
+/* ---------------- o tom, por dois métodos ---------------- */
+/*
+   Esta secao existe porque trocar o tom do dicionario pelo da IA em silencio
+   seria desonesto: os dois metodos leem a MESMA manchete e concordam em pouco
+   mais da metade das vezes. Trocar sem mostrar faria o cartao de tom mudar de
+   numero entre duas visitas, sem explicacao.
+
+   A matriz e o que responde "onde discordam". A celula grande nao fica na
+   diagonal: sao as manchetes que o dicionario chamou de neutras e a IA leu
+   como carregadas, que e exatamente o limite que o painel ja declarava em
+   texto ("o dicionario nao entende ironia") e agora mede.
+*/
+(() => {
+  const T = D.tom_ia;
+  if (!T || !T.confronto) return;
+  const C = T.confronto;
+
+  document.getElementById("secao-tom2").hidden = false;
+
+  const neutroL = C.lexico.neutro, neutroI = C.ia.neutro;
+  document.getElementById("achado-tom2").innerHTML =
+    "Nas mesmas " + num(C.n) + " manchetes, os dois métodos chegam ao mesmo " +
+    "rótulo em <b>" + vir(C.acordo, 1) + "%</b> das vezes. O dicionário chama " +
+    vir(neutroL, 1) + "% de neutras e a IA chama <b>" + vir(neutroI, 1) +
+    "%</b>. A diferença não está espalhada: ela se concentra na manchete que " +
+    "não tem palavra carregada e mesmo assim toma partido.";
+
+  const aviso = document.getElementById("aviso-tom2");
+  if (!T.pronto) {
+    let texto = "<b>Número parcial.</b> A IA leu " + vir(T.cobertura, 1) +
+      "% das matérias do recorte e o confronto só fecha a partir de " +
+      T.minimo + "%. Faltam " + num(T.alvo - T.analisadas) + ".";
+    if (T.dias_vazios.length) {
+      texto += " " + T.dias_vazios.length +
+        (T.dias_vazios.length > 1 ? " dias ainda estão sem nenhuma leitura"
+                                  : " dia ainda está sem nenhuma leitura") +
+        " (" + T.dias_vazios.map(d => d.slice(8) + "/" + d.slice(5, 7)).join(", ") +
+        "), então a comparação vale para o resto do período.";
+    }
+    texto += " O cartão de tom no topo continua mostrando o dicionário, que " +
+      "cobre o recorte inteiro.";
+    aviso.innerHTML = texto;
+    aviso.hidden = false;
+  }
+
+  const topo = Math.max(...C.valores.flatMap(v => [C.lexico[v], C.ia[v]]));
+  document.getElementById("barras-tom2").innerHTML = C.valores.map(v => {
+    const par = (nome, pct, classe) =>
+      '<div class="tom-par">' +
+        '<span class="tom-metodo">' + nome + "</span>" +
+        '<span class="tom-trilha" data-dica="' + nome + ": " + vir(pct, 1) +
+          "% das " + num(C.n) + ' manchetes lidas pelos dois métodos.">' +
+          '<span class="tom-barra ' + classe + '" style="width:' +
+          (100 * pct / topo).toFixed(1) + '%"></span>' +
+        "</span>" +
+        '<span class="tom-pct">' + vir(pct, 1) + "%</span>" +
+      "</div>";
+    return '<div class="tom-bloco">' +
+      '<span class="tom-rotulo">' + v + "</span>" +
+      par("dicionário", C.lexico[v], "") +
+      par("IA", C.ia[v], "ia") +
+      "</div>";
+  }).join("");
+
+  // a maior celula FORA da diagonal: onde os metodos mais se afastam
+  let maior = 0;
+  C.matriz.forEach((linha, i) => linha.forEach((n, j) => {
+    if (i !== j && n > maior) maior = n;
+  }));
+
+  document.getElementById("matriz-tom2").innerHTML =
+    "<caption>linha: o que o dicionário disse · coluna: o que a IA disse</caption>" +
+    "<thead><tr><th></th>" +
+    C.valores.map(v => "<th>IA: " + v + "</th>").join("") +
+    "</tr></thead><tbody>" +
+    C.matriz.map((linha, i) =>
+      "<tr><th>dicionário: " + C.valores[i] + "</th>" +
+      linha.map((n, j) => {
+        const classe = i === j ? "igual" : (n === maior ? "destaque" : "");
+        const dica = i === j
+          ? num(n) + " manchetes em que os dois disseram " + C.valores[i] + "."
+          : num(n) + " manchetes que o dicionário leu como " + C.valores[i] +
+            " e a IA leu como " + C.valores[j] + ".";
+        return '<td class="' + classe + '" data-dica="' + dica + '">' + num(n) + "</td>";
+      }).join("") + "</tr>").join("") +
+    "</tbody>";
+
+  document.getElementById("legenda-tom2").innerHTML =
+    "<b>Como ler:</b> a diagonal cinza é onde os dois concordam. Tudo fora dela " +
+    "é discordância, e a célula em vermelho é a maior: " + num(maior) +
+    " manchetes sem palavra carregada o bastante para o dicionário, que a IA " +
+    "leu como tomando partido. Nenhum dos dois é o gabarito. O dicionário é " +
+    "transparente e não entende ironia; a IA entende contexto e não mostra a " +
+    "conta.";
+})();
+
+/* ---------------- distribuição por tema ---------------- */
+/*
+   O quinto indicador. Ele tem uma trava, e a trava e o ponto: enquanto a
+   analise de IA nao cobrir o recorte inteiro, a secao mostra o que ja se sabe
+   ROTULADO como parcial, com as barras em cinza e os dias que faltam escritos
+   por extenso. Nunca em vermelho, que e a cor do numero fechado.
+
+   Por que tanto cuidado: em 06/11/2026 a cobertura era de 55% e os sete
+   primeiros dias do recorte tinham ZERO materia analisada. A distribuicao
+   calculada ali dava 80,9% de politica, e teria entrado no painel como frase
+   sobre 04-26/10 sendo frase sobre 12-26/10. A media de cobertura nao avisa
+   nada disso; quem avisa e o pior dia.
+*/
+(() => {
+  const T = D.tema;
+  if (!T || !T.fatias.length) return;
+
+  // as chaves vem sem acento do ETL, para o casamento nao depender de grafia
+  const NOME = {
+    "politica": "política", "economia": "economia",
+    "internacional": "internacional", "seguranca": "segurança",
+    "saude": "saúde", "educacao": "educação",
+    "meio ambiente": "meio ambiente",
+    "ciencia e tecnologia": "ciência e tecnologia",
+    "esportes": "esportes", "cultura": "cultura",
+    "cotidiano": "cotidiano", "outros": "outros",
+  };
+
+  document.getElementById("secao-tema").hidden = false;
+
+  const maior = T.fatias[0];
+  const segundo = T.fatias[1];
+  document.getElementById("achado-tema").innerHTML =
+    "Das " + num(T.analisadas) + " matérias já lidas pela IA, <b>" +
+    vir(maior.pct, 1) + "%</b> tratam de " + (NOME[maior.tema] || maior.tema) +
+    (segundo ? ". O segundo tema é " + (NOME[segundo.tema] || segundo.tema) +
+      ", com " + vir(segundo.pct, 1) + "%." : ".") +
+    " Falar do candidato quase sempre é falar de disputa, e o resto da agenda " +
+    "aparece pouco.";
+
+  const aviso = document.getElementById("aviso-tema");
+  if (!T.pronto) {
+    const faltam = T.alvo - T.analisadas;
+    let texto = "<b>Número parcial.</b> A IA leu " + vir(T.cobertura, 1) +
+      "% das matérias do recorte, e o indicador só fecha a partir de " +
+      T.minimo + "%. Faltam " + num(faltam) + ".";
+    if (T.dias_vazios.length) {
+      texto += " Mais importante que a média: <b>" + T.dias_vazios.length +
+        (T.dias_vazios.length > 1 ? " dias ainda não têm nenhuma matéria lida" :
+                                    " dia ainda não tem nenhuma matéria lida") +
+        "</b> (" + T.dias_vazios.map(d => d.slice(8) + "/" + d.slice(5, 7)).join(", ") +
+        "). Enquanto isso, a distribuição acima descreve o resto do período, e " +
+        "não o recorte.";
+    }
+    aviso.innerHTML = texto;
+    aviso.hidden = false;
+  }
+
+  const topo = maior.pct || 1;
+  document.getElementById("barras-tema").innerHTML = T.fatias.map(f => {
+    const rotulo = NOME[f.tema] || f.tema;
+    const dica = num(f.n) + (f.n === 1 ? " matéria" : " matérias") + " de " +
+      num(T.analisadas) + " lidas, ou " + vir(f.pct, 1) + "%" +
+      (f.tema === "outros"
+        ? ". Tema que a IA devolveu fora das onze categorias do método e que não cabe em nenhuma delas sem alguém decidir por ela."
+        : "");
+    return '<div class="tema-linha">' +
+      '<span class="tema-nome">' + rotulo + "</span>" +
+      '<span class="tema-trilha" data-dica="' + dica.replace(/"/g, "&quot;") + '">' +
+        '<span class="tema-barra' + (T.pronto ? "" : " fraca") +
+        '" style="width:' + (100 * f.pct / topo).toFixed(1) + '%"></span>' +
+      "</span>" +
+      '<span class="tema-valor"><b>' + vir(f.pct, 1) + "%</b> · " + num(f.n) + "</span>" +
+      "</div>";
+  }).join("");
+
+  document.getElementById("legenda-tema").innerHTML =
+    "<b>Como ler:</b> a barra mais longa é o tema mais frequente, e as outras " +
+    "são proporcionais a ela, não ao total. O tema sai da leitura da manchete " +
+    "pela IA, dentro das onze categorias do método; o que não cabe em nenhuma " +
+    "vira <i>outros</i> em vez de ser empurrado para a categoria mais parecida. " +
+    (T.pronto ? "" : "As barras estão em cinza porque o número ainda é parcial.");
+})();
+
+/* ---------------- episódios ---------------- */
+if (D.episodios && D.episodios.length) {
+  document.getElementById("secao-episodios").hidden = false;
+  const comBusca = D.episodios.filter(e => e.tem_busca);
+  const puxados = comBusca.filter(e => e.quem_puxa === "imprensa");
+  const maisSincrono = [...comBusca].sort((a, b) => b.r_mesmo_dia - a.r_mesmo_dia)[0];
+  const maiorExcesso = [...comBusca].sort((a, b) => (b.materias / Math.max(b.busca, 1)) - (a.materias / Math.max(a.busca, 1)))[0];
+
+  document.getElementById("achado-episodios").innerHTML =
+    `O indicador acima trata de candidatos. Aqui a mesma pergunta desce ao nível do assunto, que é onde ela foi feita: ` +
+    `a imprensa cobriu o que o eleitor procurava? As respostas diferem por episódio. ` +
+    `Em <b>${esc(maisSincrono.episodio)}</b> os dois sobem juntos: o pico da cobertura e o da busca caem no mesmo dia. ` +
+    (puxados.length ? `Em <b>${esc(puxados[0].episodio)}</b> a ordem se inverte: a cobertura sobe primeiro e a busca do público só acompanha no dia seguinte. ` : "") +
+    `<b>${esc(maiorExcesso.episodio)}</b> é o oposto: ${num(maiorExcesso.materias)} matérias contra índice de&nbsp;busca&nbsp;${vir(maiorExcesso.busca, 0)}.` +
+    `<br><span style="font-size:.86rem">Em cada cartão, as <b style="color:var(--suave)">barras cinza</b> são matérias por dia e a ` +
+    `<b style="color:var(--marca)">linha vermelha</b> é a busca do público. Todos os cartões usam o mesmo eixo de datas, ` +
+    `e cada um tem escala vertical própria. Compare o <i>formato</i> das curvas, não a altura entre cartões. A linha de busca é relativa: o ponto mais alto de cada cartão é o dia em que aquele assunto foi mais procurado, e as alturas não se comparam entre cartões.</span>`;
+
+  // EIXO COMUM: sem ele a mesma posição horizontal significa datas diferentes
+  // em cada cartão, e a comparação lado a lado deixa de valer
+  const todosDias = [...new Set(D.episodios.flatMap(e => e.serie.map(p => p.dia)))].sort();
+
+  const alvo = document.getElementById("episodios");
+
+  // O desenho aceita um tamanho: no cartão vai pequeno, e ao expandir é
+  // redesenhado grande. Sem isto o SVG só esticaria, e a mesma altura de 78
+  // viraria uma tira fina ocupando a largura toda.
+  function desenhar(e, { W, H, grande }) {
+    const porDia = Object.fromEntries(e.serie.map(p => [p.dia, p]));
+    const serie = todosDias.map(d => porDia[d] || { dia: d, materias: 0, busca: null });
+    const maxI = Math.max(...serie.map(p => p.materias)) || 1;
+    const comB = serie.filter(p => p.busca !== null);
+    const maxB = comB.length ? Math.max(...comB.map(p => p.busca)) || 1 : 1;
+    const L = grande ? 44 : 8, R = W - 40, T = grande ? 22 : 14, B = H - 16;
+    const passo = (R - L) / Math.max(todosDias.length - 1, 1);
+    const x = i => L + i * passo;
+    const partes = [`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Cobertura e busca em ${esc(e.episodio)}" font-size="${grande ? 12 : 10}">`];
+
+    if (grande) {
+      // com espaço, vale mostrar a escala das barras
+      [0, Math.ceil(maxI / 2), maxI].forEach(v => {
+        const yy = B - v / maxI * (B - T);
+        partes.push(`<line x1="${L}" y1="${yy.toFixed(1)}" x2="${R}" y2="${yy.toFixed(1)}" stroke="var(--grade)"/>`);
+        partes.push(`<text x="${L - 8}" y="${(yy + 4).toFixed(1)}" text-anchor="end" fill="var(--suave)">${v}</text>`);
+      });
+    }
+    serie.forEach((pt, i) => {
+      const h = pt.materias / maxI * (B - T);
+      if (h > 0) partes.push(`<rect x="${(x(i) - passo * .32).toFixed(1)}" y="${(B - h).toFixed(1)}" width="${(passo * .64).toFixed(1)}" height="${h.toFixed(1)}" fill="var(--suave)" opacity=".55" pointer-events="none"></rect>`);
+    });
+    if (comB.length > 1) {
+      const d = serie.map((pt, i) => pt.busca === null ? null : `${x(i).toFixed(1)},${(B - pt.busca / maxB * (B - T)).toFixed(1)}`)
+        .filter(Boolean).map((c, i) => (i ? "L" : "M") + c).join(" ");
+      partes.push(`<path d="${d}" fill="none" stroke="var(--marca)" stroke-width="${grande ? 2.4 : 1.8}"/>`);
+      if (grande) serie.forEach((pt, i) => {
+        if (pt.busca !== null) partes.push(`<circle cx="${x(i).toFixed(1)}" cy="${(B - pt.busca / maxB * (B - T)).toFixed(1)}" r="3" fill="var(--marca)" pointer-events="none"/>`);
+      });
+    }
+    serie.forEach((pt, i) => {
+      const b = pt.busca === null ? "" :
+        ` · procura <span class='d-val'>${Math.round(100 * pt.busca / maxB)}%</span> do maior dia deste assunto`;
+      partes.push(`<rect x="${(x(i) - passo / 2).toFixed(1)}" y="${T}" width="${passo.toFixed(1)}" height="${(B - T).toFixed(1)}" fill="transparent" data-dica="&lt;b&gt;${esc(e.episodio)}&lt;/b&gt; · ${diaCurto(pt.dia)}&lt;span class='d-peq'&gt;<span class='d-val'>${pt.materias}</span> matéria${pt.materias === 1 ? "" : "s"}${b}&lt;/span&gt;"/>`);
+    });
+    partes.push(`<line x1="${L}" y1="${B}" x2="${R}" y2="${B}" stroke="var(--linha)"/>`);
+    // no grande cabem mais marcas de data
+    // a última data é obrigatória; as do meio só entram se couberem sem
+    // encostar na anterior nem na última, senão 25/10 e 26/10 se sobrepõem
+    const ultimo = todosDias.length - 1;
+    const minimoPx = grande ? 52 : 40;
+    const escolhidas = [0];
+    if (grande) {
+      for (let i = 1; i < ultimo; i++) {
+        if (x(i) - x(escolhidas[escolhidas.length - 1]) >= minimoPx
+            && x(ultimo) - x(i) >= minimoPx) escolhidas.push(i);
+      }
+    }
+    escolhidas.push(ultimo);
+    escolhidas.forEach(i => {
+      const anc = i === 0 ? "start" : i === ultimo ? "end" : "middle";
+      partes.push(`<text x="${x(i).toFixed(1)}" y="${H - 2}" text-anchor="${anc}" fill="var(--suave)">${diaCurto(todosDias[i])}</text>`);
+    });
+    partes.push("</svg>");
+    return partes.join("");
+  }
+
+  const seloDe = (e) => !e.tem_busca
+    ? `<span class="pastilha p-neu" title="Não há consulta ao Google Trends para este assunto">sem dado de busca</span>`
+    : e.quem_puxa === "sem relação"
+    ? `<span class="pastilha p-neu" title="A cobertura e a busca não sobem nem descem juntas: cada uma segue o seu próprio ritmo">sem relação</span>`
+    : e.quem_puxa === "imprensa"
+    ? `<span class="pastilha" style="color:var(--marca)" title="A cobertura subiu primeiro e a busca do público só acompanhou no dia seguinte">imprensa veio antes</span>`
+    : `<span class="pastilha p-neu" title="A busca do público subiu no mesmo dia que a cobertura">público acompanhou</span>`;
+
+  // A soma dos índices diários do Trends não significa nada, o índice é
+  // relativo e não se soma. O dia de pico, sim: é uma data, e ela compara.
+  const nums = (e) => {
+    const comB = e.serie.filter(p => p.busca !== null);
+    const pico = comB.length ? comB.reduce((a, b) => b.busca > a.busca ? b : a) : null;
+    const picoImp = e.serie.reduce((a, b) => b.materias > a.materias ? b : a);
+    return `<span class="num">${num(e.materias)}</span> matérias · pico em <span class="num">${diaCurto(picoImp.dia)}</span>` +
+      (pico ? ` · mais procurado em <span class="num">${diaCurto(pico.dia)}</span>` : "");
+  };
+
+  const grade = () => D.episodios.map((e, i) => `<div class="episodio">
+      <button type="button" class="ep-abrir" data-ep="${i}" aria-label="Ampliar ${esc(e.episodio)}">
+        <div class="ep-cabeca"><b>${esc(e.episodio)}</b>${seloDe(e)}</div>
+        <div class="ep-nums">${nums(e)}</div>
+        ${desenhar(e, { W: 470, H: 78, grande: false })}
+        <span class="ep-lupa">ampliar</span>
+      </button>
+    </div>`).join("");
+
+  const ampliado = (i) => {
+    const e = D.episodios[i];
+    return `<div class="episodio ep-grande">
+      <div class="ep-cabeca"><b>${esc(e.episodio)}</b>${seloDe(e)}
+        <button type="button" class="ep-fechar" aria-label="Voltar aos seis cartões">voltar aos seis</button></div>
+      <div class="ep-nums">${nums(e)}</div>
+      ${desenhar(e, { W: 980, H: 300, grande: true })}
+      <p class="ep-pe">Barras cinza: matérias publicadas por dia. Linha vermelha: procura do público, onde o ponto mais alto é o dia de maior busca deste assunto.</p>
+    </div>`;
+  };
+
+  alvo.innerHTML = grade();
+  alvo.addEventListener("click", (ev) => {
+    const abrir = ev.target.closest(".ep-abrir");
+    if (abrir) {
+      alvo.classList.add("tem-grande");
+      alvo.innerHTML = ampliado(+abrir.dataset.ep);
+      alvo.scrollIntoView({ block: "start", behavior: "smooth" });
+      return;
+    }
+    if (ev.target.closest(".ep-fechar")) {
+      alvo.classList.remove("tem-grande");
+      alvo.innerHTML = grade();
+    }
+  });
+}
+
+/* ---------------- pesquisas ---------------- */
+if (D.pesquisas && D.pesquisas.rejeicao) {
+  document.getElementById("secao-pesquisas").hidden = false;
+  const P = D.pesquisas;
+  const intencao = (P.intencao || []).filter(p => p.base === "válidos" && p.flavio && p.lula);
+  const ultima = intencao[intencao.length - 1];
+  const rej = P.rejeicao || [];
+  const porDia = (a, b) => a.dia < b.dia ? -1 : a.dia > b.dia ? 1 : 0;
+  const quaest = rej.filter(p => p.instituto === "quaest" && p.flavio).sort(porDia);
+  const dataf = rej.filter(p => p.instituto === "datafolha" && p.flavio).sort(porDia);
+
+  // Para que lado cada serie andou e CALCULADO, nunca escrito a mao: frase fixa
+  // sobre direcao de numero ja foi desmentida pelo dado da coleta seguinte, e o
+  // painel passou a dizer o contrario do grafico logo abaixo.
+  const movimento = (serie, campo) => {
+    const de = serie[0][campo], para = serie[serie.length - 1][campo];
+    return { de, para, delta: para - de };
+  };
+  const rumo = d => d > 0 ? "subiu" : d < 0 ? "caiu" : "não se moveu";
+  const pontos = d => vir(Math.abs(d), 0) + (Math.abs(d) === 1 ? " ponto" : " pontos");
+  const qf = movimento(quaest, "flavio"), ql = movimento(quaest, "lula");
+  const df = movimento(dataf, "flavio"), dl = movimento(dataf, "lula");
+
+  // O maior desacordo entre os dois institutos medindo a mesma coisa na mesma
+  // semana. Estava escrito "ate 8 pontos" e o dado real passou disso.
+  const emDia = s => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) / 864e5;
+  let desacordo = 0;
+  quaest.forEach(a => dataf.forEach(b => {
+    if (Math.abs(emDia(a.dia) - emDia(b.dia)) > 2) return;
+    ["flavio", "lula"].forEach(c => {
+      if (a[c] && b[c]) desacordo = Math.max(desacordo, Math.abs(a[c] - b[c]));
+    });
+  }));
+
+  // A comparacao com a serie do Lula e o que decide a leitura: duas series do
+  // mesmo instituto andando juntas medem o instituto, e nao o episodio.
+  const juntos = qf.delta !== 0 && Math.sign(qf.delta) === Math.sign(ql.delta);
+  const inverte = Math.sign(df.delta) !== Math.sign(qf.delta);
+
+  document.getElementById("achado-pesquisas").innerHTML =
+    `Em 21/10, no auge do episódio do sigilo, a Folha escreveu que Lula <i>“mira aumento na rejeição de Flávio Bolsonaro”</i>. ` +
+    `Pela Quaest a rejeição dele <b>${rumo(qf.delta)} ${pontos(qf.delta)}</b>, de ${vir(qf.de, 0)}% para ${vir(qf.para, 0)}%. ` +
+    (juntos
+      ? `A do Lula ${rumo(ql.delta)} ${pontos(ql.delta)} na mesma janela, e ninguém pedia o sigilo do Lula. Quando as duas séries do mesmo instituto andam para o mesmo lado, o que se mede ali é o instituto ou o fim da campanha. `
+      : `A do Lula ${rumo(ql.delta)} ${pontos(ql.delta)} na mesma janela. `) +
+    (inverte ? `Pela Datafolha o sinal se inverte: ` : `Pela Datafolha: `) +
+    `a rejeição do Flávio ${rumo(df.delta)} ${pontos(df.delta)}, de ${vir(df.de, 0)}% para ${vir(df.para, 0)}%, ` +
+    (dl.delta === 0
+      ? `e a do Lula ficou onde estava, em ${vir(dl.para, 0)}%. `
+      : `e a do Lula ${rumo(dl.delta)} ${pontos(dl.delta)}. `) +
+    `Os dois chegam a discordar do nível em ${pontos(desacordo)} medindo a mesma coisa na mesma semana, razão para nunca ler um instituto isolado. ` +
+    (ultima ? `E na véspera, <b>todas</b> as pesquisas davam Flávio à frente: ${vir(ultima.flavio, 0)}% contra ${vir(ultima.lula, 0)}% em votos válidos. ` : "");
+
+  // o resultado oficial: a única medida do projeto que tem gabarito
+  const R = D.resultado;
+  if (R) {
+    const nome = c => c.startsWith("LULA") ? "Lula" : "Flávio Bolsonaro";
+    const piores = R.ultimas_pesquisas.filter(u => u.dia >= "2026-10-24");
+    document.getElementById("resultado-oficial").innerHTML = `
+      <div class="res-faixa">
+        <div class="res-par">
+          <div class="res-nome" style="color:var(--lula)">${esc(nome(R.vencedor))}</div>
+          <div class="res-pct">${vir(R.pct_vencedor, 2)}%</div>
+          <div class="res-votos">${num(R.votos_vencedor)} votos</div>
+        </div>
+        <div class="res-par">
+          <div class="res-nome" style="color:var(--flavio)">${esc(nome(R.perdedor))}</div>
+          <div class="res-pct">${vir(R.pct_perdedor, 2)}%</div>
+          <div class="res-votos">${num(R.votos_perdedor)} votos</div>
+        </div>
+        <div class="res-par">
+          <div class="res-nome">margem</div>
+          <div class="res-pct">${vir(R.margem_pontos, 2)} pts</div>
+          <div class="res-votos">${num(R.margem_votos)} votos</div>
+        </div>
+      </div>
+      <p class="res-erro"><b>As pesquisas erraram a margem por ${vir(Math.abs(piores[0] ? piores[0].erro : 0), 2)} pontos.</b>
+      Na véspera, ${piores.map(u => esc(inst(u.instituto))).join(" e ")} davam Flávio
+      ${vir(Math.abs(piores[0] ? piores[0].margem_prevista : 0), 0)} ponto${Math.abs(piores[0] ? piores[0].margem_prevista : 0) === 1 ? "" : "s"} à frente;
+      ele terminou ${vir(Math.abs(R.margem_real_flavio), 2)} atrás.</p>
+      <p class="res-fonte">Fonte: TSE, votação por candidato e município, arquivo gerado em ${esc(R.gerado_pelo_tse)}.
+      Conferido contra o 1º turno, que a imprensa publicou como Flávio 47,03% e Lula 45,16%.</p>`;
+  }
+
+  // gráfico: rejeição dos dois, por instituto, com marcador da eleição
+  const todos = rej.filter(p => p.flavio && p.lula);
+  if (todos.length > 2) {
+    const dias = [...new Set([...todos.map(p => p.dia), "2026-10-25"])].sort();
+    const L = 52, R = 712, T = 64, B = 244, h = 334;
+    // eixo PROPORCIONAL AO TEMPO, não à ordem dos pontos: as pesquisas saem em
+    // intervalos desiguais, e num eixo categórico seis dias e um dia ocupariam
+    // a mesma largura, o que falsearia a inclinação, que é o que se lê aqui
+    const emDias = d => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)) / 864e5;
+    const diaIni = emDias(dias[0]), diaFim = emDias(dias[dias.length - 1]);
+    const x = d => L + (emDias(d) - diaIni) / (diaFim - diaIni) * (R - L);
+    const y = v => B - (v - 38) / (58 - 38) * (B - T);
+    const partes = [`<svg viewBox="0 0 760 ${h}" role="img" aria-label="Rejeição de cada candidato por pesquisa publicada" font-size="12">`];
+    partes.push(`<text x="380" y="14" text-anchor="middle" fill="var(--vermelho)" font-weight="600">Rejeição (%) em cada pesquisa publicada</text>`);
+    // O episódio do sigilo: dois traços que abraçam o período, DENTRO da área
+    // do gráfico. Fora dela, encostados na moldura, eles pareciam enfeite e
+    // ninguém ligava a faixa aos pontos que ela marca. Retângulo cinza chapado
+    // já foi testado e cobria os dados. Vermelho está reservado para a marca da
+    // eleição, então aqui vai o cinza de apoio, mais grosso para ficar legível.
+    const d1 = dias.find(d => d >= "2026-10-19"), d2 = dias.find(d => d >= "2026-10-23") || dias[dias.length - 2];
+    if (d1 && d2) {
+      const xa = x(d1), xb = Math.max(x(d2), xa + 6);
+      // Os dois traços ficam entre as linhas de 55% e de 40%, nas faixas onde
+      // nenhuma pesquisa caiu, então abraçam os pontos sem passar por cima.
+      const yTopo = T + 45, yBase = B - 43;
+      const traco = (yy) => `<line x1="${xa.toFixed(1)}" y1="${yy}" x2="${xb.toFixed(1)}" y2="${yy}" stroke="var(--apagado)" stroke-width="4" stroke-linecap="round"/>`;
+      partes.push(traco(yTopo));
+      partes.push(traco(yBase));
+      // Ancorado pela direita e recuado: centrado, o rótulo crescia para a
+      // direita e batia no "25/10 · Lula vence", que fica logo adiante.
+      partes.push(`<text x="${(xb - 2).toFixed(1)}" y="${yTopo - 9}" text-anchor="end" fill="var(--apagado)" font-size="10.5">episódio do sigilo</text>`);
+    }
+    [40, 45, 50, 55].forEach(v => {
+      partes.push(`<line x1="${L}" y1="${y(v)}" x2="${R}" y2="${y(v)}" stroke="var(--grade)"/>`);
+      partes.push(`<text x="${L - 9}" y="${y(v) + 4}" text-anchor="end" fill="var(--suave)">${v}%</text>`);
+    });
+    // no eixo proporcional dois rótulos podem encostar; pula o que não couber
+    let ultimoX = -99;
+    dias.forEach(d => {
+      if (x(d) - ultimoX < 34) return;
+      ultimoX = x(d);
+      partes.push(`<text x="${x(d)}" y="${B + 20}" text-anchor="middle" fill="var(--suave)">${diaCurto(d)}</text>`);
+    });
+    [["flavio", "Flávio", "var(--flavio)"], ["lula", "Lula", "var(--lula)"]].forEach(([campo, rotulo, cor]) => {
+      ["quaest", "datafolha"].forEach(inst => {
+        const pts = todos.filter(p => p.instituto === inst);
+        if (pts.length < 2) return;
+        const d = pts.map((p, i) => (i ? "L" : "M") + x(p.dia).toFixed(1) + "," + y(p[campo]).toFixed(1)).join(" ");
+        partes.push(`<path d="${d}" fill="none" stroke="${cor}" stroke-width="2" stroke-dasharray="${inst === "datafolha" ? "5 4" : ""}"/>`);
+        pts.forEach(p => partes.push(`<circle cx="${x(p.dia).toFixed(1)}" cy="${y(p[campo]).toFixed(1)}" r="7" fill="${cor}" fill-opacity="0" data-dica="&lt;b&gt;${rotulo}&lt;/b&gt; · ${INSTITUTO[inst] || inst}&lt;br&gt;${diaCurto(p.dia)}&lt;span class='d-peq'&gt;rejeição &lt;span class='d-val'&gt;${vir(p[campo], 1)}%&lt;/span&gt;&lt;/span&gt;"/><circle cx="${x(p.dia).toFixed(1)}" cy="${y(p[campo]).toFixed(1)}" r="3.4" fill="${cor}" pointer-events="none"></circle>`));
+      });
+    });
+    // o dia da eleição
+    partes.push(`<line x1="${x("2026-10-25")}" y1="${T - 8}" x2="${x("2026-10-25")}" y2="${B}" stroke="var(--marca)" stroke-width="1.5" stroke-dasharray="3 3"/>`);
+    // Ancorado pela direita: centrado no dia 25, o rotulo passava da borda
+    // do viewBox e a palavra "vence" saia cortada no print e na tela.
+    partes.push(`<text x="${x("2026-10-25") + 4}" y="${T - 34}" text-anchor="end" fill="var(--marca)" font-weight="600">25/10 · Lula vence</text>`);
+    // Legenda em duas dimensoes, porque o grafico codifica duas coisas ao
+    // mesmo tempo: a COR diz o candidato e o TRACO diz o instituto.
+    partes.push(`<g font-size="11" fill="var(--suave)">
+      <text x="${L}" y="${h - 22}" font-weight="600">cor = candidato</text>
+      <circle cx="${L + 108}" cy="${h - 26}" r="4" fill="var(--lula)"/><text x="${L + 117}" y="${h - 22}">Lula</text>
+      <circle cx="${L + 156}" cy="${h - 26}" r="4" fill="var(--flavio)"/><text x="${L + 165}" y="${h - 22}">Flávio Bolsonaro</text>
+      <text x="${L}" y="${h - 5}" font-weight="600">traço = instituto</text>
+      <line x1="${L + 108}" y1="${h - 9}" x2="${L + 132}" y2="${h - 9}" stroke="var(--apagado)" stroke-width="2"/><text x="${L + 139}" y="${h - 5}">Quaest</text>
+      <line x1="${L + 196}" y1="${h - 9}" x2="${L + 220}" y2="${h - 9}" stroke="var(--apagado)" stroke-width="2" stroke-dasharray="5 4"/><text x="${L + 227}" y="${h - 5}">Datafolha</text>
+    </g>`);
+    partes.push("</svg>");
+    document.getElementById("grafico-pesquisas").innerHTML = partes.join("");
+  }
+
+  document.getElementById("tabela-pesquisas").innerHTML = `
+    <thead><tr><th>Dia</th><th>Instituto</th><th>Métrica</th><th>Flávio</th><th>Lula</th></tr></thead>
+    <tbody>${["rejeicao", "intencao"].flatMap(m => (P[m] || []).filter(p => p.flavio && p.lula).map(p => `<tr>
+      <td>${diaCurto(p.dia)}</td><td>${esc(inst(p.instituto))}</td>
+      <td>${m === "rejeicao" ? "rejeição" : "intenção"}</td>
+      <td class="num">${vir(p.flavio, 1)}%</td><td class="num">${vir(p.lula, 1)}%</td>
+    </tr>`)).join("")}</tbody>`;
+}
+
+/* ---------------- drill-down ---------------- */
+(function () {
+  let veiculo = null, candidato = null, termo = "", mostrando = 30;
+  const PASSO = 30;
+  const elVeic = document.getElementById("trilha-veiculo");
+  const elCand = document.getElementById("trilha-candidato");
+  const elConta = document.getElementById("conta-materias");
+  const elLista = document.getElementById("lista-materias");
+  const elMais = document.getElementById("botao-mais");
+
+  const elBusca = document.getElementById("busca-materias");
+
+  /* A busca e por SUBSTRING, ao contrario do resto do painel.
+     Nos indicadores a regra e palavra inteira, porque la o numero sai sozinho
+     e ninguem ve o que entrou na conta: "celular" contando como "lula" vira
+     erro invisivel. Aqui quem digita ve as manchetes que voltaram e julga na
+     hora, e cortar "eleic" antes de "eleicoes" so atrapalharia. */
+  const sa = (t) => (t || "").toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "");
+
+  const filtrar = () => D.materias.filter(m =>
+    (!veiculo || m.v === veiculo) &&
+    (!candidato || m.c.includes(candidato)) &&
+    (!termo || sa(m.t).includes(termo)));
+
+  /* Marca o trecho que casou, no texto ORIGINAL com acento.
+     Procurar na versao sem acento e recortar na original so funciona porque
+     NFD + remocao de diacritico preserva o numero de caracteres base. */
+  function destacar(titulo) {
+    if (!termo) return esc(titulo);
+    const alvo = sa(titulo);
+    let saida = "", de = 0, i;
+    while ((i = alvo.indexOf(termo, de)) !== -1) {
+      saida += esc(titulo.slice(de, i)) +
+        '<span class="casou">' + esc(titulo.slice(i, i + termo.length)) + "</span>";
+      de = i + termo.length;
+    }
+    return saida + esc(titulo.slice(de));
+  }
+
+  function fichas(el, opcoes, ativo, aoClicar) {
+    el.innerHTML = "";
+    opcoes.forEach(o => {
+      const b = document.createElement("button");
+      b.className = "ficha";
+      b.type = "button";
+      b.textContent = o.rotulo;
+      b.setAttribute("aria-pressed", String(ativo === o.valor));
+      b.addEventListener("click", () => { aoClicar(ativo === o.valor ? null : o.valor); });
+      el.appendChild(b);
+    });
+  }
+
+  function render() {
+    fichas(elVeic, D.veiculos.map(v => ({ valor: v.slug, rotulo: v.nome })), veiculo,
+      (v) => { veiculo = v; mostrando = PASSO; render(); });
+    fichas(elCand, ["lula", "flavio"].map(c => ({ valor: c, rotulo: D.rotulos[c] })), candidato,
+      (c) => { candidato = c; mostrando = PASSO; render(); });
+
+    const achadas = filtrar();
+    const alcance = [veiculo && D.veiculos.find(v => v.slug === veiculo).nome,
+                     candidato && D.rotulos[candidato],
+                     termo && `com “${elBusca.value.trim()}”`].filter(Boolean).join(" · ");
+    elConta.textContent = `${num(achadas.length)} manchete${achadas.length === 1 ? "" : "s"}`
+      + (alcance ? `, ${alcance}` : " no recorte inteiro")
+      + ", da mais recente para a mais antiga.";
+
+    elLista.innerHTML = achadas.slice(0, mostrando).map(m => {
+      const quem = m.c.map(c => `<span class="pastilha p-${c}">${D.rotulos[c].split(" ")[0]}</span>`).join(" ");
+      const tom = m.tom ? `<span class="pastilha p-${m.tom === "negativo" ? "neg" : m.tom === "positivo" ? "pos" : "neu"}">${m.tom}</span>` : "";
+      const capa = m.p ? `<span>capa ${m.p}ª</span>` : "";
+      const nome = D.veiculos.find(v => v.slug === m.v).nome;
+      return `<li class="item">
+        <span class="quando">${diaCurto(m.d)}</span>
+        <span class="corpo">
+          <a class="manchete" href="${esc(m.u)}" target="_blank" rel="noopener noreferrer">${destacar(m.t)}</a>
+          <span class="meta">${quem}${tom}<span>${esc(nome)}</span>${m.s ? `<span>${esc(m.s)}</span>` : ""}${capa}</span>
+        </span>
+      </li>`;
+    }).join("");
+
+    if (!achadas.length) {
+      elLista.innerHTML = '<li class="vazio">Nenhuma manchete' +
+        (termo ? ' com <b>' + esc(elBusca.value.trim()) + "</b>" : "") +
+        (veiculo || candidato ? " neste recorte de veículo e candidato." : " no recorte.") +
+        "</li>";
+    }
+
+    elMais.hidden = achadas.length <= mostrando;
+    elMais.textContent = `Mostrar mais ${Math.min(PASSO, achadas.length - mostrando)} de ${num(achadas.length - mostrando)} restantes`;
+  }
+  elMais.addEventListener("click", () => { mostrando += PASSO; render(); });
+  elBusca.addEventListener("input", () => {
+    termo = sa(elBusca.value.trim());
+    mostrando = PASSO;
+    render();
+  });
+  render();
+})();
+
+
+{
+  const d = new Date(D.gerado_em);
+  const quando = isNaN(d) ? D.gerado_em
+    : d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+  document.getElementById("rodape-gerado").textContent =
+    `${num(D.recorte.noticias)} notícias de ${D.veiculos.length} veículos · dados de ${quando}`;
+}
+
+/* ---------- navegacao entre paginas ---------- */
+function trocarPagina(p){
+  document.getElementById("pagina-radar").hidden = p !== "radar";
+  document.getElementById("pagina-sobre").hidden = p !== "sobre";
+  document.querySelectorAll(".nav button").forEach(b => {
+    if (b.getAttribute("data-pagina") === p) b.setAttribute("aria-current", "page");
+    else b.removeAttribute("aria-current");
+  });
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+document.querySelectorAll(".nav button").forEach(b => {
+  b.addEventListener("click", () => trocarPagina(b.getAttribute("data-pagina")));
+});
+
+
+/* O guia so lista a secao que de fato apareceu: tres delas ficam ocultas
+   quando o dado correspondente nao existe no recorte. */
+document.querySelectorAll(".guia-itens a[data-se]").forEach(a => {
+  const alvo = document.getElementById(a.getAttribute("data-se"));
+  if (!alvo || alvo.hidden) a.remove();
+});
+
+
+/* ---------- abrir/fechar a lista de materias ---------- */
+(() => {
+  const b = document.getElementById("abrir-materias");
+  const corpo = document.getElementById("corpo-materias");
+  const texto = document.getElementById("abrir-materias-texto");
+  if (!b || !corpo) return;
+  // o numero vem da contagem ja calculada, para o botao dizer o tamanho
+  const quantas = (D.materias || []).length;
+  const rotulo = quantas ? `Abrir a lista de matérias (${num(quantas)})`
+                         : "Abrir a lista de matérias";
+  texto.textContent = rotulo;
+  b.addEventListener("click", () => {
+    const abrindo = corpo.hidden;
+    corpo.hidden = !abrindo;
+    b.setAttribute("aria-expanded", String(abrindo));
+    texto.textContent = abrindo ? "Fechar a lista de matérias" : rotulo;
+  });
+})();
+
+
+/* ---------- glossário: passar o mouse num cabeçalho explica o termo ----------
+   Os títulos de coluna são curtos por necessidade, e vários deles ("equilíbrio",
+   "descompasso", "citam algum") não significam nada para quem chega de fora.
+   Em vez de alongar o cabeçalho e quebrar a tabela, cada termo ganha a sua
+   explicação no hover, reaproveitando a mesma camada de dica dos gráficos.
+   Um passe só, depois de tudo desenhado, pega as tabelas todas, inclusive
+   as que forem acrescentadas depois. */
+const GLOSSARIO = {
+  "equilíbrio": "<b>Equilíbrio</b><br>Se o veículo citou os dois candidatos na mesma medida." +
+    "<span class='d-peq'>1,00 = citou os dois igual. Quanto menor, mais a cobertura pendeu para um lado.</span>",
+  "descompasso": "<b>Descompasso</b><br>A diferença entre o espaço que o assunto teve na imprensa " +
+    "e o espaço que teve na busca do público." +
+    "<span class='d-peq'>Positivo: a imprensa falou mais do que procuraram. Negativo: procuraram mais do que a imprensa falou.</span>",
+  "citam algum": "<b>Citam algum</b><br>De todas as notícias do veículo, quantas mencionam pelo menos " +
+    "um dos dois candidatos no título.",
+  "neutras": "<b>Neutras</b><br>Manchetes sem palavra de carga positiva nem negativa, segundo o dicionário usado." +
+    "<span class='d-peq'>A manchete não é a matéria: a medida é aproximada.</span>",
+  "posições na capa": "<b>Posições na capa</b><br>Quantas posições da home foram lidas naquele veículo." +
+    "<span class='d-peq'>NÃO se compara entre veículos: cada home tem estrutura própria, então “chegou ao topo” significa coisas diferentes em cada um.</span>",
+  "razão": "<b>Razão</b><br>Quantas vezes um candidato foi mais citado que o outro naquela fase." +
+    "<span class='d-peq'>1,00× seria o mesmo número de menções para os dois.</span>",
+  "imprensa": "<b>Imprensa</b><br>Que fatia das menções do período esse termo ocupou no noticiário.",
+  "público": "<b>Público</b><br>Que fatia da busca no Google esse termo ocupou, no mesmo período." +
+    "<span class='d-peq'>O índice do Trends é relativo e só se compara dentro da mesma consulta.</span>",
+  "base": "<b>Base de cálculo</b><br>Sobre o que o percentual foi calculado: só os votos válidos, " +
+    "ou o total incluindo brancos, nulos e indecisos.",
+  "métrica": "<b>Métrica</b><br>O que aquela pesquisa mediu: intenção de voto, rejeição, " +
+    "ou aprovação do governo.",
+  "janela": "<b>Janela</b><br>O intervalo de dias que aquela fase cobre.",
+};
+(function glossario() {
+  document.querySelectorAll("table th").forEach(th => {
+    const chave = th.textContent.trim().toLowerCase();
+    const texto = GLOSSARIO[chave];
+    if (!texto || th.hasAttribute("data-dica")) return;
+    th.setAttribute("data-dica", texto);
+    th.classList.add("tem-glossario");
+  });
+})();
+
+
+/* O ícone era irmão do <h2>. Quando o h2 tem subtítulo, ele fica alto e o
+   ícone centrava verticalmente contra o bloco todo, parecendo solto. Movido
+   para dentro do h2, ele senta ao lado do título, na mesma linha. */
+/* O total vem do payload, e nao escrito aqui.
+   Ele ESTAVA escrito: dizia 19.051 enquanto os dados diziam 19.082. O ETL
+   rodou de novo, o numero mudou, e o texto ficou para tras sem ninguem notar.
+   Numero que aparece em frase tem de sair da mesma fonte que os graficos. */
+const totalNoticias = document.getElementById("totalNoticias");
+if (totalNoticias && D.recorte) totalNoticias.textContent = num(D.recorte.noticias);
+
+document.querySelectorAll(".cabeca").forEach(c => {
+  const h2 = c.querySelector("h2"), ic = c.querySelector(":scope > .icone");
+  if (!h2 || !ic) return;
+  const glosa = h2.querySelector(".h2-glosa");
+  if (glosa) h2.insertBefore(ic, glosa); else h2.appendChild(ic);
+});
+
+</script>
+</body>
+</html>
